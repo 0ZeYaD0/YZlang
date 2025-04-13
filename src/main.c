@@ -2,6 +2,7 @@
 
 int main(void)
 {
+    printf("TEst");
     const char *file_path = "D:\\Codes\\Zlang\\test\\main.zl";
 
     FILE *file = fopen(file_path, "r");
