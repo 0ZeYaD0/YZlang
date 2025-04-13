@@ -1,7 +1,11 @@
 {
     "C_Cpp.errorSquiggles": "disabled",
     "files.associations": {
+        "*.asm": "nasm",
         "ds.h": "c",
-        "*.asm": "nasm"
+        "token.h": "c",
+        "lexer.h": "c",
+        "stdlib.h": "c",
+        "genrate_token.h": "c"
     }
 }

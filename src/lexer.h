@@ -1,21 +1,61 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <ctype.h>
+#include "core/genrate_token.h"
+
 void lexer(FILE *file)
 {
     char cur = fgetc(file);
+    int token_count = 0;
+
+    printf("LEXICAL ANALYSIS\n");
+    printf("----------------\n");
+
     while (cur != EOF)
     {
-        if (cur == ';')
-            printf("Found Semicoln: %c\n", cur);
-        else if (cur == '(')
-            printf("Found open parc: %c\n", cur);
-        else if (cur == ')')
-            printf("Found close parc: %c\n", cur);
+        if (isspace(cur))
+        {
+            cur = fgetc(file);
+            continue;
+        }
+
+        token_count++;
+
+        if (cur == ';' || cur == '(' || cur == ')')
+        {
+            TokenSeparator *test_token = generate_separator(cur);
+
+            const char *sep_type;
+            if (cur == ';')
+                sep_type = "SEMICOLON";
+            else if (cur == '(')
+                sep_type = "OPEN_PARENTHESIS";
+            else
+                sep_type = "CLOSE_PARENTHESIS";
+
+            printf("SEPARATOR: %c (%s)\n", cur, sep_type);
+            free(test_token);
+        }
         else if (isdigit(cur))
-            printf("Found digit: %d\n", cur - '0');
+        {
+            TokenLit *test_token = generate_number(cur, file);
+            printf("NUMBER: %d\n", test_token->value);
+            free(test_token);
+        }
         else if (isalpha(cur))
-            printf("Found char: %c\n", cur);
+        {
+            TokenKeyword *test_token = generate_keyword(cur, file);
+            if (test_token->type != -1)
+            {
+                printf("KEYWORD: exit\n");
+            }
+            else
+            {
+                printf("UNKNOWN: identifier\n");
+            }
+            free(test_token);
+        }
+
         cur = fgetc(file);
     }
+
+    printf("----------------\n");
+    printf("TOTAL TOKENS: %d\n", token_count);
 }
