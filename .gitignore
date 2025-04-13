@@ -1,1 +1,8 @@
-src\main.exe
+# Ignore main.exe in the src directory
+src/main.exe
+
+# Alternative: ignore all .exe files everywhere
+# *.exe
+
+# Alternative: ignore all .exe files only in src directory
+# src/*.exe
