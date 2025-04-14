@@ -52,6 +52,33 @@ void lexer(FILE *file)
             }
             free(test_token);
         }
+        else if (cur == '+' || cur == '-' || cur == '*' || cur == '/' || cur == '=')
+        {
+            TokenOperator *test_token = generate_operator(cur);
+
+            const char *op_type;
+            switch (cur)
+            {
+            case '+':
+                op_type = "PLUS";
+                break;
+            case '-':
+                op_type = "MINUS";
+                break;
+            case '*':
+                op_type = "MULTIPLY";
+                break;
+            case '/':
+                op_type = "DIVIDE";
+                break;
+            case '=':
+                op_type = "ASSIGN";
+                break;
+            }
+
+            printf("OPERATOR: %c (%s)\n", cur, op_type);
+            free(test_token);
+        }
 
         cur = fgetc(file);
     }

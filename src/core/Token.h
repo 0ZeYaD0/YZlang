@@ -3,6 +3,20 @@
 
 typedef enum
 {
+    PLUS,
+    MINUS,
+    MULTIPLY,
+    DIVIDE,
+    ASSIGN,
+} TypeOperator;
+
+typedef struct
+{
+    TypeOperator type;
+} TokenOperator;
+
+typedef enum
+{
     SEMI,
     OPEN_PAR,
     CLOSE_PAR
@@ -34,4 +48,4 @@ typedef struct
     int value;
 } TokenLit;
 
-#endif // TOKEN_H
+#endif

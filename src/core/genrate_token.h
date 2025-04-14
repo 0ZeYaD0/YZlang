@@ -132,3 +132,38 @@ TokenSeparator *generate_separator(char cur)
 
     return token;
 }
+
+TokenOperator *generate_operator(char cur)
+{
+    TokenOperator *token = malloc(sizeof(TokenOperator));
+    if (!token)
+    {
+        fprintf(stderr, "Error: Memory allocation failed for TokenOperator\n");
+        return NULL;
+    }
+
+    switch (cur)
+    {
+    case '+':
+        token->type = PLUS;
+        break;
+    case '-':
+        token->type = MINUS;
+        break;
+    case '*':
+        token->type = MULTIPLY;
+        break;
+    case '/':
+        token->type = DIVIDE;
+        break;
+    case '=':
+        token->type = ASSIGN;
+        break;
+    default:
+        fprintf(stderr, "Error: Unknown operator character: '%c'\n", cur);
+        free(token);
+        return NULL;
+    }
+
+    return token;
+}
