@@ -1,11 +1,11 @@
 @echo off
 SetLocal EnableDelayedExpansion
 
-set outputAssembly=ycli
+set outputAssembly=yzlang
 
 echo ------------------------------
 echo C++ build script for %outputAssembly%
-echo      by Yassin Ibrahim (Y)
+echo      by Yassin Ibrahim (DeltaY)
 echo ------------------------------
 echo.
 

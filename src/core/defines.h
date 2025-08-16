@@ -1,9 +1,12 @@
 #ifndef DEFINES_H
 #define DEFINES_H
 
+// yzlang specific
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1
 #define VERSION_PATCH 1
+
+#define YZDEBUG true
 
 // unsigned int types
 typedef unsigned char u8;
