@@ -7,8 +7,10 @@
 #include <fstream>
 #include <string>
 #include <sstream>
-
 #include <mutex>
+#include <time.h>
+#include <vector>
+
 #define LOCK_MUTEX(x) std::lock_guard<std::mutex> lock(x)
 
 #include <chrono>
@@ -18,148 +20,148 @@ using std::chrono::system_clock;
 #define TEXT_COLORS
 
 #ifdef TEXT_COLORS
-    #define TEXT_RED    "\x1b[31m"
-    #define TEXT_GREEN  "\x1b[32m"
-    #define TEXT_YELLOW "\x1b[33m"
-    #define TEXT_BLUE   "\x1b[34m"
-    #define TEXT_PURPLE "\x1b[35m"
-    #define TEXT_CYAN   "\x1b[36m"
-    #define TEXT_WHITE  "\x1b[0m"
+#define TEXT_RED "\x1b[31m"
+#define TEXT_GREEN "\x1b[32m"
+#define TEXT_YELLOW "\x1b[33m"
+#define TEXT_BLUE "\x1b[34m"
+#define TEXT_PURPLE "\x1b[35m"
+#define TEXT_CYAN "\x1b[36m"
+#define TEXT_WHITE "\x1b[0m"
 #else
-    #define TEXT_RED    "\x1b[0m"
-    #define TEXT_GREEN  "\x1b[0m"
-    #define TEXT_YELLOW "\x1b[0m"
-    #define TEXT_BLUE   "\x1b[0m"
-    #define TEXT_PURPLE "\x1b[0m"
-    #define TEXT_CYAN   "\x1b[0m"
-    #define TEXT_WHITE  "\x1b[0m"
+#define TEXT_RED "\x1b[0m"
+#define TEXT_GREEN "\x1b[0m"
+#define TEXT_YELLOW "\x1b[0m"
+#define TEXT_BLUE "\x1b[0m"
+#define TEXT_PURPLE "\x1b[0m"
+#define TEXT_CYAN "\x1b[0m"
+#define TEXT_WHITE "\x1b[0m"
 #endif
 
-#define RED_TEXT(x)    TEXT_RED, x, TEXT_WHITE
-#define GREEN_TEXT(x)  TEXT_GREEN, x, TEXT_WHITE
+#define RED_TEXT(x) TEXT_RED, x, TEXT_WHITE
+#define GREEN_TEXT(x) TEXT_GREEN, x, TEXT_WHITE
 #define YELLOW_TEXT(x) TEXT_YELLOW, x, TEXT_WHITE
-#define BLUE_TEXT(x)   TEXT_BLUE, x, TEXT_WHITE
+#define BLUE_TEXT(x) TEXT_BLUE, x, TEXT_WHITE
 #define PURPLE_TEXT(x) TEXT_PURPLE, x, TEXT_WHITE
-#define CYAN_TEXT(x)   TEXT_CYAN, x, TEXT_WHITE
+#define CYAN_TEXT(x) TEXT_CYAN, x, TEXT_WHITE
 
-#define LOG_NONE      0
-#define LOG_FATAL     1
-#define LOG_ERROR     2
-#define LOG_WARN      3
-#define LOG_DEBUG     4
-#define LOG_TRACE     5
-#define LOG_INFO      6
+#define LOG_NONE 0
+#define LOG_FATAL 1
+#define LOG_ERROR 2
+#define LOG_WARN 3
+#define LOG_DEBUG 4
+#define LOG_TRACE 5
+#define LOG_INFO 6
 #define LOG_INFO_ONLY 7
 
 #define LOG_CONSOLE 1
-#define LOG_FILE    2
-#define LOG_ALL     3
+#define LOG_FILE 2
+#define LOG_ALL 3
 
 #define LOG_DEFAULT_FILE "log.txt"
-#define __FILENAME__     (strstr(__FILE__, "src") ? strstr(__FILE__, "src") + 3 : __FILE__)
-#define FILE_INFO        __FILENAME__, __LINE__
-#define NO_FILE_INFO     nulllptr, nullptr
+#define __FILENAME__ (strstr(__FILE__, "src") ? strstr(__FILE__, "src") + 3 : __FILE__)
+#define FILE_INFO __FILENAME__, __LINE__
+#define NO_FILE_INFO nulllptr, nullptr
 
 #define _LIBCPP_TOSTRING2(s) #s
 
 #define LOGINIT() Logger log
-#define LOGINFO(x, y, z)                                                                                               \
-    LogInfo info;                                                                                                      \
-    info.level = (LogLevel)x;                                                                                          \
-    info.filename = y;                                                                                                 \
+#define LOGINFO(x, y, z)      \
+    LogInfo info;             \
+    info.level = (LogLevel)x; \
+    info.filename = y;        \
     info.linenumber = _LIBCPP_TOSTRING2(z);
 
 #define LOG_CHANGE_PRIORITY(x) Logger::priority = (LogLevel)x;
 
-#define LFATAL(x...)                                                                                                   \
-    {                                                                                                                  \
-        LOGINIT();                                                                                                     \
-        LOGINFO(LOG_FATAL, __FILENAME__, __LINE__)                                                                     \
-        log.Log(info, x);                                                                                              \
+#define LFATAL(x...)                               \
+    {                                              \
+        LOGINIT();                                 \
+        LOGINFO(LOG_FATAL, __FILENAME__, __LINE__) \
+        log.Log(info, x);                          \
     }
 
-#define LERROR(x...)                                                                                                   \
-    {                                                                                                                  \
-        LOGINIT();                                                                                                     \
-        LOGINFO(LOG_FATAL, __FILENAME__, __LINE__)                                                                     \
-        log.Log(info, x);                                                                                              \
+#define LERROR(x...)                               \
+    {                                              \
+        LOGINIT();                                 \
+        LOGINFO(LOG_FATAL, __FILENAME__, __LINE__) \
+        log.Log(info, x);                          \
     }
 
-#define LWARN(x, y...)                                                                                                 \
-    {                                                                                                                  \
-        LOGINIT();                                                                                                     \
-        if(x)                                                                                                          \
-        {                                                                                                              \
-            LOGINFO(LOG_WARN, __FILENAME__, __LINE__)                                                                  \
-            log.Log(info, y);                                                                                          \
-        }                                                                                                              \
-        else                                                                                                           \
-        {                                                                                                              \
-            LOGINFO(LOG_WARN, "", "")                                                                                  \
-            log.Log(info, y);                                                                                          \
-        }                                                                                                              \
+#define LWARN(x, y...)                                \
+    {                                                 \
+        LOGINIT();                                    \
+        if (x)                                        \
+        {                                             \
+            LOGINFO(LOG_WARN, __FILENAME__, __LINE__) \
+            log.Log(info, y);                         \
+        }                                             \
+        else                                          \
+        {                                             \
+            LOGINFO(LOG_WARN, "", "")                 \
+            log.Log(info, y);                         \
+        }                                             \
     }
 
-#define LDEBUG(x, y...)                                                                                                \
-    {                                                                                                                  \
-        LOGINIT();                                                                                                     \
-        if(x)                                                                                                          \
-        {                                                                                                              \
-            LOGINFO(LOG_DEBUG, __FILENAME__, __LINE__)                                                                 \
-            log.Log(info, y);                                                                                          \
-        }                                                                                                              \
-        else                                                                                                           \
-        {                                                                                                              \
-            LOGINFO(LOG_DEBUG, "", "")                                                                                 \
-            log.Log(info, y);                                                                                          \
-        }                                                                                                              \
+#define LDEBUG(x, y...)                                \
+    {                                                  \
+        LOGINIT();                                     \
+        if (x)                                         \
+        {                                              \
+            LOGINFO(LOG_DEBUG, __FILENAME__, __LINE__) \
+            log.Log(info, y);                          \
+        }                                              \
+        else                                           \
+        {                                              \
+            LOGINFO(LOG_DEBUG, "", "")                 \
+            log.Log(info, y);                          \
+        }                                              \
     }
 
-#define LTRACE(x, y...)                                                                                                \
-    {                                                                                                                  \
-        LOGINIT();                                                                                                     \
-        if(x)                                                                                                          \
-        {                                                                                                              \
-            LOGINFO(LOG_TRACE, __FILENAME__, __LINE__)                                                                 \
-            log.Log(info, y);                                                                                          \
-        }                                                                                                              \
-        else                                                                                                           \
-        {                                                                                                              \
-            LOGINFO(LOG_TRACE, "", "")                                                                                 \
-            log.Log(info, y);                                                                                          \
-        }                                                                                                              \
+#define LTRACE(x, y...)                                \
+    {                                                  \
+        LOGINIT();                                     \
+        if (x)                                         \
+        {                                              \
+            LOGINFO(LOG_TRACE, __FILENAME__, __LINE__) \
+            log.Log(info, y);                          \
+        }                                              \
+        else                                           \
+        {                                              \
+            LOGINFO(LOG_TRACE, "", "")                 \
+            log.Log(info, y);                          \
+        }                                              \
     }
 
-#define LINFO(x, y...)                                                                                                 \
-    {                                                                                                                  \
-        LOGINIT();                                                                                                     \
-        if(x)                                                                                                          \
-        {                                                                                                              \
-            LOGINFO(LOG_INFO, __FILENAME__, __LINE__)                                                                  \
-            log.Log(info, y);                                                                                          \
-        }                                                                                                              \
-        else                                                                                                           \
-        {                                                                                                              \
-            LOGINFO(LOG_INFO, "", "")                                                                                  \
-            log.Log(info, y);                                                                                          \
-        }                                                                                                              \
+#define LINFO(x, y...)                                \
+    {                                                 \
+        LOGINIT();                                    \
+        if (x)                                        \
+        {                                             \
+            LOGINFO(LOG_INFO, __FILENAME__, __LINE__) \
+            log.Log(info, y);                         \
+        }                                             \
+        else                                          \
+        {                                             \
+            LOGINFO(LOG_INFO, "", "")                 \
+            log.Log(info, y);                         \
+        }                                             \
     }
 
-#define LASSERT(x, y)                                                                                                  \
-    {                                                                                                                  \
-        if(!(x))                                                                                                       \
-        {                                                                                                              \
-            LFATAL(y);                                                                                                 \
-            exit(1);                                                                                                   \
-        }                                                                                                              \
+#define LASSERT(x, y)  \
+    {                  \
+        if (!(x))      \
+        {              \
+            LFATAL(y); \
+            exit(1);   \
+        }              \
     }
 
 // log without anyting.
-#define LLOG(x...)                                                                                                     \
-    {                                                                                                                  \
-        LOGINIT();                                                                                                     \
-        LOGINFO(LOG_NONE, "", "")                                                                                      \
-        log.Log(info, x);                                                                                              \
+#define LLOG(x...)                \
+    {                             \
+        LOGINIT();                \
+        LOGINFO(LOG_NONE, "", "") \
+        log.Log(info, x);         \
     }
 
 enum class LogLevel
@@ -192,23 +194,23 @@ struct LogInfo
 //___________________ LOGGER CLASS _____________________
 class Logger
 {
-    private:
+private:
     static std::string filePath;
     static std::ofstream fileStream;
 
     static std::mutex mut;
 
-    public:
+public:
     static LogLevel priority;
     static OutputType outType;
 
-    private:
+private:
     static inline void EnableFileOutput(std::string filepath = LOG_DEFAULT_FILE)
     {
-        if(filepath.size() != 0)
+        if (filepath.size() != 0)
             filePath = filepath;
 
-        if(fileStream.is_open())
+        if (fileStream.is_open())
             fileStream.close();
 
         fileStream.open(filePath, std::ios::app);
@@ -216,56 +218,56 @@ class Logger
 
     static inline void DisableFileOutput()
     {
-        if(fileStream.is_open())
+        if (fileStream.is_open())
             fileStream.close();
     }
 
     static inline std::string GetTitle(LogLevel ll, bool colored)
     {
         std::string output;
-        switch(ll)
+        switch (ll)
         {
         case LogLevel::NONE:
             break;
         case LogLevel::FATAL:
             output = "";
-            if(colored)
+            if (colored)
                 output.append(TEXT_RED);
             output.append("FATAL");
             return output;
             break;
         case LogLevel::ERROR:
-            if(colored)
+            if (colored)
                 output = TEXT_RED;
             output.append("ERROR");
             return output;
             break;
         case LogLevel::WARN:
-            if(colored)
+            if (colored)
                 output = TEXT_YELLOW;
             output.append("WARN");
             return output;
             break;
         case LogLevel::DEBUG:
-            if(colored)
+            if (colored)
                 output = TEXT_BLUE;
             output.append("DEBUG");
             return output;
             break;
         case LogLevel::TRACE:
-            if(colored)
+            if (colored)
                 output = TEXT_CYAN;
             output.append("TRACE");
             return output;
             break;
         case LogLevel::INFO:
-            if(colored)
+            if (colored)
                 output = TEXT_PURPLE;
             output.append("INFO");
             return output;
             break;
         case LogLevel::INFO_ONLY:
-            if(colored)
+            if (colored)
                 output = TEXT_PURPLE;
             output.append("INFO");
             break;
@@ -273,6 +275,8 @@ class Logger
         return output;
     }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     static inline std::string GetTimestamp()
     {
         auto now = system_clock::now();
@@ -282,6 +286,7 @@ class Logger
         ss << std::put_time(std::localtime(&inTime), "%X");
         return ss.str();
     }
+#pragma GCC diagnostic pop
 
     // clang-format off
     template<typename F, typename L>
@@ -299,7 +304,7 @@ class Logger
     }
 
     template<typename F, typename L>
-    static inline std::string GetFullHeader(LogLevel lvl, bool colored, F file, L line)
+    static inline std::string GetFullHeader(LogLevel lvl , bool colored, F file, L line)
     {
         std::stringstream ss;
         ss << '[';
@@ -467,7 +472,7 @@ class Logger
 
     ~Logger()
     {
-        if(fileStream.is_open())
+        if (fileStream.is_open())
             fileStream.close();
     }
 };

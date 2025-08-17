@@ -5,7 +5,7 @@ compiler="g++"
 
 echo "------------------------------"
 echo "C++ build script for $outputAssembly"
-echo "      by Yassin Ibrahim (Y)"
+echo "by Yassin Ibrahim/Zeyad Emad (DeltaY)(0ZeYaD0)"
 echo "------------------------------"
 echo
 

@@ -1,11 +1,11 @@
 @echo off
 SetLocal EnableDelayedExpansion
 
-set outputAssembly=yzlang
+set outputAssembly=yzlang.exe
 
 echo ------------------------------
 echo C++ build script for %outputAssembly%
-echo      by Yassin Ibrahim (DeltaY)
+echo by Yassin Ibrahim (DeltaY)
 echo ------------------------------
 echo.
 
@@ -79,7 +79,7 @@ popd
 
 echo compiling source code...
 
-set compilerFlags=
+set compilerFlags=--std=c++17
 rem -g -Wvarargs -Wall -Werror
 set includeFlags=
 rem -I./thirdparty/include/
