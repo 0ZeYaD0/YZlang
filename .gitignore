@@ -1,5 +1,6 @@
 # Ignore main.exe in the src directory
 src/main.exe
+test.dio
 
 # Alternative: ignore all .exe files everywhere
 # *.exe
