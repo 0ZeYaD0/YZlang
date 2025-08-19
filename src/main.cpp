@@ -29,14 +29,9 @@ i32 main(int argc, char *argv[])
 
     Tokenizer tokenizer(contents);
     std::vector<Token> tokens = tokenizer.tokenize();
-    Parser parser(std::move(tokens));
-    std::optional<NodeExit> tree = parser.parse_exit();
 
-    if (!tree.has_value())
-    {
-        LLOG("No exit found!");
-        exit(EXIT_FAILURE);
-    }
+    Parser parser(std::move(tokens));
+    std::optional<NodeProg> tree = parser.parse_prog();
 
     Generator genrator(tree.value());
 
@@ -47,6 +42,7 @@ i32 main(int argc, char *argv[])
 
     system("gcc -c out.s -o out.o");
     system("gcc out.o -o out.exe");
+
     int exit_code = system("out.exe");
     std::cout << "Exit code: " << exit_code << std::endl;
 

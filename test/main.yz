@@ -1,1 +1,3 @@
-exit 69;
+val x = 70;
+val y = 80;
+exit (y);

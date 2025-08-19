@@ -9,7 +9,12 @@ enum class TokenType
 {
     exit,
     _int_lit,
-    semi
+    semi,
+    open_paren,
+    close_paren,
+    ident,
+    let,
+    eq
 };
 
 struct Token
@@ -31,12 +36,12 @@ public:
         std::vector<Token> tokens;
         std::string buff;
 
-        while (peak().has_value())
+        while (peek().has_value())
         {
-            if (std::isalpha(peak().value()))
+            if (std::isalpha(peek().value()))
             {
                 buff.push_back(consume());
-                while (peak().has_value() && std::isalnum(peak().value()))
+                while (peek().has_value() && std::isalnum(peek().value()))
                 {
                     buff.push_back(consume());
                 }
@@ -45,13 +50,21 @@ public:
                 {
                     tokens.push_back({.type = TokenType::exit});
                 }
+                else if (buff == "val")
+                {
+                    tokens.push_back({.type = TokenType::let});
+                }
+                else
+                {
+                    tokens.push_back({.type = TokenType::ident, .value = buff});
+                }
                 buff.clear();
             }
-            else if (std::isdigit(peak().value()))
+            else if (std::isdigit(peek().value()))
             {
                 buff.push_back(consume());
 
-                while (peak().has_value() && std::isdigit(peak().value()))
+                while (peek().has_value() && std::isdigit(peek().value()))
                 {
                     buff.push_back(consume());
                 }
@@ -59,10 +72,25 @@ public:
                 tokens.push_back({.type = TokenType::_int_lit, .value = buff});
                 buff.clear();
             }
-            else if (peak().value() == ';')
+            else if (peek().value() == '(')
+            {
+                consume();
+                tokens.push_back({.type = TokenType::open_paren});
+            }
+            else if (peek().value() == ')')
+            {
+                consume();
+                tokens.push_back({.type = TokenType::close_paren});
+            }
+            else if (peek().value() == ';')
             {
                 consume();
                 tokens.push_back({.type = TokenType::semi});
+            }
+            else if (peek().value() == '=')
+            {
+                consume();
+                tokens.push_back({.type = TokenType::eq});
             }
             else
             {
@@ -74,12 +102,12 @@ public:
     }
 
 private:
-    [[nodiscard]] inline std::optional<char> peak(int ahead = 0) const
+    [[nodiscard]] inline std::optional<char> peek(int offset = 0) const
     {
-        if (m_idx + ahead >= m_src.length())
+        if (m_idx + offset >= m_src.length())
             return {};
         else
-            return m_src.at(m_idx + ahead);
+            return m_src.at(m_idx + offset);
     }
 
     inline char consume()
