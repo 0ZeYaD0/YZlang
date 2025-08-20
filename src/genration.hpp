@@ -9,60 +9,79 @@
 class Generator
 {
 public:
-    inline Generator(NodeProg prog)
-        : m_prog(std::move(prog))
+    inline Generator(const NodeProg &prog)
+        : m_prog(prog)
     {
     }
 
-    void gen_expr(const NodeExpr &expr)
+    void gen_expr(const NodeExpr *expr)
     {
         struct ExprVisitor
         {
             Generator *gen;
-            void operator()(const NodeExprIntLit &expr_int_lit) const
+            void operator()(const NodeExprIntLit *expr_int_lit) const
             {
-                gen->m_output << "    movl $" << expr_int_lit.int_lit.value.value() << ", %eax\n";
+                gen->m_output << "    movl $" << expr_int_lit->int_lit.value.value() << ", %eax\n";
             }
-            void operator()(const NodeExprIdent &expr_ident) const
+            void operator()(const NodeExprIdent *expr_ident) const
             {
-                auto it = gen->m_vars.find(expr_ident.ident.value.value());
+                auto it = gen->m_vars.find(expr_ident->ident.value.value());
                 if (it == gen->m_vars.end())
                 {
-                    std::cerr << "Undeclared identifier: " << expr_ident.ident.value.value() << std::endl;
+                    std::cerr << "Undeclared identifier: " << expr_ident->ident.value.value() << std::endl;
                     exit(EXIT_FAILURE);
                 }
                 gen->m_output << "    movl " << it->second << "(%rbp), %eax\n";
             }
+            void operator()(const BinExpr *bin_expr) const
+            {
+                struct BinExprVisitor
+                {
+                    Generator *gen;
+                    void operator()(const NodeBinExprAdd *add) const
+                    {
+                        gen->gen_expr(add->rh);
+                        gen->m_output << "    pushq %rax\n";
+                        gen->gen_expr(add->lh);
+                        gen->m_output << "    popq %rcx\n";
+                        gen->m_output << "    addl %ecx, %eax\n";
+                    }
+                    void operator()(const NodeBinExprMulti *multi) const
+                    {
+                    }
+                };
+                std::visit(BinExprVisitor{.gen = gen}, bin_expr->var);
+            }
         };
-        std::visit(ExprVisitor{.gen = this}, expr.var);
+        std::visit(ExprVisitor{.gen = this}, expr->var);
     }
 
-    void gen_stmt(const NodeStmt &stmt)
+    void gen_stmt(const NodeStmt *stmt)
     {
         struct StmtVisitor
         {
             Generator *gen;
-            void operator()(const NodeStmtExit &stmt_exit) const
+            void operator()(const NodeStmtExit *stmt_exit) const
             {
-                gen->gen_expr(stmt_exit.expr);
+                gen->gen_expr(stmt_exit->expr);
                 gen->m_output << "    movq %rbp, %rsp\n";
                 gen->m_output << "    popq %rbp\n";
                 gen->m_output << "    ret\n";
             }
-            void operator()(const NodeStmtLet &stmt_let) const
+            void operator()(const NodeStmtLet *stmt_let) const
             {
-                if (gen->m_vars.count(stmt_let.ident.value.value()))
+                if (gen->m_vars.count(stmt_let->ident.value.value()))
                 {
-                    std::cerr << "Identifier already declared: " << stmt_let.ident.value.value() << std::endl;
+                    std::cerr << "Identifier already declared: " << stmt_let->ident.value.value() << std::endl;
                     exit(EXIT_FAILURE);
                 }
-                gen->gen_expr(stmt_let.expr);
+                gen->gen_expr(stmt_let->expr);
                 gen->m_output << "    pushq %rax\n";
                 gen->m_stack_size += 8;
-                gen->m_vars[stmt_let.ident.value.value()] = -gen->m_stack_size;
+                gen->m_vars[stmt_let->ident.value.value()] = -gen->m_stack_size;
             }
         };
-        std::visit(StmtVisitor{.gen = this}, stmt.var);
+        std::visit(StmtVisitor{.gen = this}, stmt->var);
     }
 
     [[nodiscard]] std::string genrate()
@@ -87,7 +106,7 @@ public:
     }
 
 private:
-    const NodeProg m_prog;
+    const NodeProg &m_prog;
     std::stringstream m_output;
     std::map<std::string, int> m_vars;
     int m_stack_size = 0;

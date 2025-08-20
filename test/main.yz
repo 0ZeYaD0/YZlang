@@ -1,3 +1,4 @@
-val x = 70;
+val x = 80 + 10;
 val y = 80;
-exit (y);
+val z = 40;
+exit (x + y + z);

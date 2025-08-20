@@ -3,6 +3,7 @@
 #include "Tokenize.hpp"
 #include "parser.hpp"
 #include "genration.hpp"
+#include "arena.hpp"
 
 i32 main(int argc, char *argv[])
 {

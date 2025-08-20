@@ -3,7 +3,7 @@ src/main.exe
 test.dio
 out.o
 out.exe
-out.o
+out.s
 
 # Alternative: ignore all .exe files everywhere
 # *.exe
