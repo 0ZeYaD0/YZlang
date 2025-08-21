@@ -25,58 +25,61 @@ struct Token
 };
 
 
-struct NodeExpr;
-struct BinExpr;
-
-struct NodeExprIntLit
+struct NodeTermIntLit
 {
     Token int_lit;
 };
 
-struct NodeExprIdent
+struct NodeTermIdent
 {
     Token ident;
 };
 
+struct NodeExpr;
+
 struct NodeBinExprAdd
 {
-    NodeExpr *lh;
-    NodeExpr *rh;
+    NodeExpr* lhs;
+    NodeExpr* rhs;
 };
 
-struct NodeBinExprMulti
-{
-    NodeExpr *lh;
-    NodeExpr *rh;
+struct NodeBinExprMulti {
+    NodeExpr* lhs;
+    NodeExpr* rhs;
 };
 
-struct BinExpr
+struct NodeBinExpr
 {
-    std::variant<NodeBinExprAdd *, NodeBinExprMulti *> var;
+    NodeBinExprAdd* add;
+};
+
+struct NodeTerm
+{
+    std::variant<NodeTermIntLit*, NodeTermIdent*> var;
 };
 
 struct NodeExpr
 {
-    std::variant<NodeExprIntLit *, NodeExprIdent *, BinExpr *> var;
+    std::variant<NodeTerm*, NodeBinExpr*> var;
 };
 
 struct NodeStmtExit
 {
-    NodeExpr *expr;
+    NodeExpr* expr;
 };
 
 struct NodeStmtLet
 {
     Token ident;
-    NodeExpr *expr;
+    NodeExpr* expr;
 };
 
 struct NodeStmt
 {
-    std::variant<NodeStmtExit *, NodeStmtLet *> var;
+    std::variant<NodeStmtExit*, NodeStmtLet*> var;
 };
 
 struct NodeProg
 {
-    std::vector<NodeStmt *> stmts;
+    std::vector<NodeStmt*> stmts;
 };

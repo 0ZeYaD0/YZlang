@@ -1,12 +1,7 @@
-# Ignore main.exe in the src directory
-src/main.exe
-test.dio
-out.o
-out.exe
-out.s
+.vscode/
+bin/
+obj/
 
-# Alternative: ignore all .exe files everywhere
-# *.exe
-
-# Alternative: ignore all .exe files only in src directory
-# src/*.exe
+*.exe
+*.o
+*.s

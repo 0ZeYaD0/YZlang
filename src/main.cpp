@@ -13,6 +13,12 @@ i32 main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    #if defined(IPLATFORM_LINUX)
+        LLOG(PURPLE_TEXT("Running on Linux...\n"));
+    #elif defined(IPLATFORM_WINDOWS)
+        LLOG(PURPLE_TEXT("Running on Windows...\n"));
+    #endif
+
     std::string contents;
     {
         std::ifstream input(argv[1]);
@@ -37,14 +43,28 @@ i32 main(int argc, char *argv[])
 
     {
         std::ofstream file("out.s");
-        file << genrator.genrate();
+        file << genrator.generate();
     }
 
+#if defined(IPLATFORM_LINUX)
+    system("nasm -f elf64 out.s -o out.o");
+    system("ld out.o -o out");
+    
+    int status = system("./out");
+
+    if (WIFEXITED(status))
+    {
+        int exit_code = WEXITSTATUS(status);
+        LLOG(BLUE_TEXT("Exit Code: "), exit_code, "\n");
+    }
+
+#elif defined(IPLATFORM_WINDOWS)
     system("gcc -c out.s -o out.o");
     system("gcc out.o -o out.exe");
 
-    int exit_code = system("out.exe && echo $?");
+    i32 exit_code = system("out.exe");
     LLOG(BLUE_TEXT("Exit Code: "), exit_code, "\n");
+#endif
 
     return EXIT_SUCCESS;
 }
