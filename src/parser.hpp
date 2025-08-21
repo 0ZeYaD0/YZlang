@@ -1,10 +1,9 @@
 #pragma once
-#include "Tokenize.hpp"
 #include <optional>
 #include <iostream>
 #include <variant>
-#include "nods.hpp"
-#include "arena.hpp"
+#include "core/nodes.hpp"
+#include "core/arena.hpp"
 
 class Parser
 {

@@ -68,4 +68,8 @@ typedef double f64;
     #error "platform is not supported."
 #endif
 
+#ifndef EXIT_FAILURE
+    #define EXIT_FAILURE 1
+#endif
+
 #endif // DEFINES_H

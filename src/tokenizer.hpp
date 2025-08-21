@@ -1,31 +1,14 @@
 #pragma once
-#include <iostream>
 #include <vector>
 #include <string>
 #include <optional>
 #include <cctype>
+#include "core/defines.h"
+#include "core/nodes.hpp"
+#include "YLogger/logger.h"
 
-enum class TokenType
-{
-    exit,
-    _int_lit,
-    semi,
-    open_paren,
-    close_paren,
-    ident,
-    let,
-    eq,
-    plus
-};
+class Tokenizer {
 
-struct Token
-{
-    TokenType type;
-    std::optional<std::string> value;
-};
-
-class Tokenizer
-{
 public:
     inline explicit Tokenizer(const std::string &src)
         : m_src(src), m_idx(0)
@@ -98,9 +81,20 @@ public:
                 consume();
                 tokens.push_back({.type = TokenType::plus});
             }
-            else
+            else if(peek().value() == '*')
             {
                 consume();
+                tokens.push_back({.type = TokenType::star});
+            }
+            else if(std::isspace(peek().value()))
+            {
+                consume();
+                continue;
+            } 
+            else 
+            {
+                LLOG(RED_TEXT("Token Type not in known token list....\n"));
+                exit(EXIT_FAILURE);
             }
         }
         m_idx = 0;

@@ -1,6 +1,29 @@
 #pragma once
 #include <variant>
 #include <vector>
+#include <optional>
+#include <string>
+
+enum class TokenType
+{
+    exit,
+    _int_lit,
+    semi,
+    open_paren,
+    close_paren,
+    ident,
+    let,
+    eq,
+    plus,
+    star
+};
+
+struct Token
+{
+    TokenType type;
+    std::optional<std::string> value;
+};
+
 
 struct NodeExpr;
 struct BinExpr;
