@@ -6,14 +6,15 @@
 #include "core/nodes.hpp"
 #include "core/arena.hpp"
 
-class Parser {
+class Parser
+{
 public:
     inline explicit Parser(std::vector<Token> tokens)
         : m_tokens(std::move(tokens)), m_alloc(1024 * 1024 * 4)
     {
     }
 
-    std::optional<NodeTerm*> parse_term()
+    std::optional<NodeTerm *> parse_term()
     {
         if (auto int_lit = try_consume(TokenType::_int_lit))
         {
@@ -31,45 +32,22 @@ public:
             term->var = expr_ident;
             return term;
         }
-        else
+        else if (try_consume(TokenType::open_paren))
         {
-            return {};
-        }
-    }
-
-    std::optional<NodeExpr*> parse_expr()
-    {
-        if (auto term = parse_term())
-        {
-            if (try_consume(TokenType::plus).has_value())
+            auto expr = parse_expr();
+            if (!expr.has_value())
             {
-                auto bin_expr = m_alloc.alloc<NodeBinExpr>();
-                auto bin_expr_add = m_alloc.alloc<NodeBinExprAdd>();
-                auto lhs_expr = m_alloc.alloc<NodeExpr>();
-                lhs_expr->var = term.value();
-                bin_expr_add->lhs = lhs_expr;
-
-                if (auto rhs = parse_expr())
-                {
-                    bin_expr_add->rhs = rhs.value();
-                    bin_expr->add = bin_expr_add;
-                    auto expr = m_alloc.alloc<NodeExpr>();
-                    expr->var = bin_expr;
-                    return expr;
-                }
-                else
-                {
-                    LLOG(RED_TEXT("Expected expression\n"));
-                    exit(EXIT_FAILURE);
-                }
-
+                LLOG(RED_TEXT("Expected Expression inside parentheses\n"));
+                exit(EXIT_FAILURE);
             }
-            else 
-            {
-                auto expr = m_alloc.alloc<NodeExpr>();
-                expr->var = term.value();
-                return expr;
-            }
+            try_consume(TokenType::close_paren, "Expected ')' after expression");
+
+            auto term_paren = m_alloc.alloc<NodeTermParen>();
+            term_paren->expr = expr.value();
+
+            auto term = m_alloc.alloc<NodeTerm>();
+            term->var = term_paren;
+            return term;
         }
         else
         {
@@ -77,10 +55,79 @@ public:
         }
     }
 
-    std::optional<NodeStmt*> parse_stmt()
+    std::optional<NodeExpr *> parse_expr(int min_prec = 0)
     {
-        if (peek().value().type == TokenType::exit && peek(1).has_value()
-            && peek(1).value().type == TokenType::open_paren)
+        std::optional<NodeTerm *> term_lhs_opt = parse_term();
+        if (!term_lhs_opt.has_value())
+        {
+            return {};
+        }
+        auto lhs_expr = m_alloc.alloc<NodeExpr>();
+        lhs_expr->var = term_lhs_opt.value();
+
+        while (true)
+        {
+            std::optional<Token> curr_tok = peek();
+            if (!curr_tok.has_value())
+            {
+                break;
+            }
+
+            std::optional<int> prec = bin_prec(curr_tok->type);
+            if (!prec.has_value() || prec.value() < min_prec)
+            {
+                break;
+            }
+
+            Token op = consume();
+            int next_min_prec = prec.value() + 1;
+            auto rhs_expr_opt = parse_expr(next_min_prec);
+            if (!rhs_expr_opt.has_value())
+            {
+                LLOG(RED_TEXT("Unable to parse expression on right-hand side of operator\n"));
+                exit(EXIT_FAILURE);
+            }
+
+            auto bin_expr = m_alloc.alloc<NodeBinExpr>();
+            if (op.type == TokenType::plus)
+            {
+                auto add = m_alloc.alloc<NodeBinExprAdd>();
+                add->lhs = lhs_expr;
+                add->rhs = rhs_expr_opt.value();
+                bin_expr->var = add;
+            }
+            else if (op.type == TokenType::star)
+            {
+                auto multi = m_alloc.alloc<NodeBinExprMulti>();
+                multi->lhs = lhs_expr;
+                multi->rhs = rhs_expr_opt.value();
+                bin_expr->var = multi;
+            }
+            else if (op.type == TokenType::sub)
+            {
+                auto sub = m_alloc.alloc<NodeBinExprSub>();
+                sub->lhs = lhs_expr;
+                sub->rhs = rhs_expr_opt.value();
+                bin_expr->var = sub;
+            }
+            else if (op.type == TokenType::div)
+            {
+                auto div = m_alloc.alloc<NodeBinExprDiv>();
+                div->lhs = lhs_expr;
+                div->rhs = rhs_expr_opt.value();
+                bin_expr->var = div;
+            }
+
+            auto new_lhs_expr = m_alloc.alloc<NodeExpr>();
+            new_lhs_expr->var = bin_expr;
+            lhs_expr = new_lhs_expr;
+        }
+        return lhs_expr;
+    }
+
+    std::optional<NodeStmt *> parse_stmt()
+    {
+        if (peek().value().type == TokenType::exit && peek(1).has_value() && peek(1).value().type == TokenType::open_paren)
         {
             consume();
             consume();
@@ -104,10 +151,8 @@ public:
 
             return stmt;
         }
-        else if( // ayo wth is this condition
-            peek().has_value() && peek().value().type == TokenType::let && peek(1).has_value()
-            && peek(1).value().type == TokenType::ident && peek(2).has_value()
-            && peek(2).value().type == TokenType::eq)
+        else if (
+            peek().has_value() && peek().value().type == TokenType::val && peek(1).has_value() && peek(1).value().type == TokenType::ident && peek(2).has_value() && peek(2).value().type == TokenType::eq)
         {
             consume();
             auto stmt_let = m_alloc.alloc<NodeStmtLet>();
@@ -172,7 +217,7 @@ private:
         return m_tokens.at(m_idx++);
     }
 
-    inline Token try_consume(TokenType type, const std::string& err_msg)
+    inline Token try_consume(TokenType type, const std::string &err_msg)
     {
         if (peek().has_value() && peek().value().type == type)
         {

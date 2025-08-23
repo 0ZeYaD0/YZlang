@@ -1,3 +1,2 @@
-val x = 1;
-val y = x + 5;
-exit(y);
+val x = (1 + 2) * 3;
+exit(x);

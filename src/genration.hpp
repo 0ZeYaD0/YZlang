@@ -5,36 +5,34 @@
 #include <cassert>
 #include <map>
 #include <sstream>
-
 #include "core/defines.h"
 
-class Generator {
+class Generator
+{
 public:
     inline explicit Generator(NodeProg prog)
         : m_prog(std::move(prog))
     {
     }
 
-    void gen_term(const NodeTerm* term)
+    void gen_term(const NodeTerm *term)
     {
         struct TermVisitor
         {
-            Generator* gen;
-            void operator()(const NodeTermIntLit* term_int_lit) const
+            Generator *gen;
+            void operator()(const NodeTermIntLit *term_int_lit) const
             {
 
-            #if defined(IPLATFORM_LINUX)
+#if defined(IPLATFORM_LINUX)
                 gen->m_output << "    mov rax, " << term_int_lit->int_lit.value.value() << "\n";
                 gen->push("rax");
-            #elif defined(IPLATFORM_WINDOWS)
+#elif defined(IPLATFORM_WINDOWS)
                 gen->m_output << "    movl $" << term_int_lit->int_lit.value.value() << ", %eax\n";
                 gen->push("rax");
-            #endif
-
+#endif
             }
 
-
-            void operator()(const NodeTermIdent* term_ident) const
+            void operator()(const NodeTermIdent *term_ident) const
             {
                 if (!gen->m_vars.count(term_ident->ident.value.value()))
                 {
@@ -42,18 +40,22 @@ public:
                     exit(EXIT_FAILURE);
                 }
 
-            #if defined(IPLATFORM_LINUX)
-                const auto& var = gen->m_vars.at(term_ident->ident.value.value());
+#if defined(IPLATFORM_LINUX)
+                const auto &var = gen->m_vars.at(term_ident->ident.value.value());
                 std::stringstream offset;
                 offset << "QWORD [rsp + " << (gen->m_stack_size - var.stack_loc - 1) * 8 << "]\n";
                 gen->push(offset.str());
-            #elif defined(IPLATFORM_WINDOWS)
-                const auto& var = gen->m_vars.at(term_ident->ident.value.value());
+#elif defined(IPLATFORM_WINDOWS)
+                const auto &var = gen->m_vars.at(term_ident->ident.value.value());
                 gen->m_output << "    movl -" << (var.stack_loc + 1) * 8 << "(%rbp), %eax\n";
                 gen->push("rax");
-   
-            #endif
 
+#endif
+            }
+
+            void operator()(const NodeTermParen *term_paren) const
+            {
+                gen->gen_expr(term_paren->expr);
             }
         };
 
@@ -61,67 +63,133 @@ public:
         std::visit(visitor, term->var);
     }
 
-    void gen_expr(const NodeExpr* expr)
+    void gen_bin_expr(const NodeBinExpr *bin_expr)
+    {
+        struct BinExprVisitor
+        {
+            Generator *gen;
+            void operator()(const NodeBinExprAdd *add)
+            {
+#if defined(IPLATFORM_LINUX)
+                gen->gen_expr(add->rhs);
+                gen->gen_expr(add->lhs);
+                gen->pop("rbx");
+                gen->pop("rax");
+                gen->m_output << "    add rax, rbx\n";
+                gen->push("rax");
+#elif defined(IPLATFORM_WINDOWS)
+                gen->gen_expr(add->rhs);
+                gen->gen_expr(add->lhs);
+                gen->pop("rcx");
+                gen->pop("rax");
+                gen->m_output << "    addl %eax, %ecx\n";
+                gen->push("rcx");
+#endif
+            }
+            void operator()(const NodeBinExprSub *sub)
+            {
+#if defined(IPLATFORM_LINUX)
+                gen->gen_expr(sub->rhs);
+                gen->gen_expr(sub->lhs);
+                gen->pop("rbx");
+                gen->pop("rax");
+                gen->m_output << "    sub rbx, rax\n";
+                gen->push("rbx");
+#elif defined(IPLATFORM_WINDOWS)
+                gen->gen_expr(sub->rhs);
+                gen->gen_expr(sub->lhs);
+                gen->pop("rcx");
+                gen->pop("rax");
+                gen->m_output << "    subl %eax, %ecx\n";
+                gen->push("rcx");
+#endif
+            }
+            void operator()(const NodeBinExprMulti *multi)
+            {
+#if defined(IPLATFORM_LINUX)
+                gen->gen_expr(multi->rhs);
+                gen->gen_expr(multi->lhs);
+                gen->pop("rbx");
+                gen->pop("rax");
+                gen->m_output << "    mul rbx\n";
+                gen->push("rax");
+#elif defined(IPLATFORM_WINDOWS)
+                gen->gen_expr(multi->rhs);
+                gen->gen_expr(multi->lhs);
+                gen->pop("rcx");
+                gen->pop("rax");
+                gen->m_output << "    imul %ecx, %eax\n";
+                gen->push("rax");
+#endif
+            }
+            void operator()(const NodeBinExprDiv *div)
+            {
+#if defined(IPLATFORM_LINUX)
+                gen->gen_expr(div->rhs);
+                gen->gen_expr(div->lhs);
+                gen->pop("rax");
+                gen->pop("rbx");
+                gen->m_output << "    xor rdx, rdx\n";
+                gen->m_output << "    idiv rbx\n";
+                gen->push("rax");
+#elif defined(IPLATFORM_WINDOWS)
+                gen->gen_expr(div->rhs);
+                gen->gen_expr(div->lhs);
+                gen->pop("rax");
+                gen->pop("rcx");
+                gen->m_output << "    xorl %edx, %edx\n";
+                gen->m_output << "    idivl %ecx\n";
+                gen->push("rax");
+#endif
+            }
+        };
+        BinExprVisitor visitor{.gen = this};
+        std::visit(visitor, bin_expr->var);
+    }
+
+    void gen_expr(const NodeExpr *expr)
     {
         struct ExprVisitor
         {
-            Generator* gen;
-            void operator()(const NodeTerm* term) const
+            Generator *gen;
+            void operator()(const NodeTerm *term) const
             {
                 gen->gen_term(term);
             }
 
-            void operator()(const NodeBinExpr* bin_expr) const
+            void operator()(const NodeBinExpr *bin_expr) const
             {
-
-            #if defined(IPLATFORM_LINUX)
-                gen->gen_expr(bin_expr->add->lhs);
-                gen->gen_expr(bin_expr->add->rhs);
-                gen->pop("rax");
-                gen->pop("rbx");
-                gen->m_output << "    add rax, rbx\n";
-                gen->push("rax");
-            #elif defined(IPLATFORM_WINDOWS)
-                gen->gen_expr(bin_expr->add->lhs);
-                gen->gen_expr(bin_expr->add->rhs);
-                gen->pop("rax");
-                gen->pop("rcx");
-                gen->m_output << "    addl %eax, %ecx\n";
-                gen->push("rcx");
-            #endif
-
+                gen->gen_bin_expr(bin_expr);
             }
         };
 
-        ExprVisitor visitor { .gen = this };
+        ExprVisitor visitor{.gen = this};
         std::visit(visitor, expr->var);
     }
 
-    void gen_stmt(const NodeStmt* stmt)
+    void gen_stmt(const NodeStmt *stmt)
     {
-        struct StmtVisitor 
+        struct StmtVisitor
         {
-            Generator* gen;
-            void operator()(const NodeStmtExit* stmt_exit) const
+            Generator *gen;
+            void operator()(const NodeStmtExit *stmt_exit) const
             {
 
-            #if defined(IPLATFORM_LINUX)
+#if defined(IPLATFORM_LINUX)
                 gen->gen_expr(stmt_exit->expr);
                 gen->m_output << "    mov rax, 60\n";
                 gen->pop("rdi");
                 gen->m_output << "    syscall\n";
-            #elif defined(IPLATFORM_WINDOWS)
+#elif defined(IPLATFORM_WINDOWS)
                 gen->gen_expr(stmt_exit->expr);
                 gen->pop("rax");
                 gen->m_output << "    movq %rbp, %rsp\n";
                 gen->m_output << "    popq %rbp\n";
                 gen->m_output << "    ret\n";
-            #endif
-
+#endif
             }
 
-
-            void operator()(const NodeStmtLet* stmt_let) const
+            void operator()(const NodeStmtLet *stmt_let) const
             {
                 if (gen->m_vars.count(stmt_let->ident.value.value()))
                 {
@@ -129,71 +197,68 @@ public:
                     exit(EXIT_FAILURE);
                 }
 
-                gen->m_vars.insert({ stmt_let->ident.value.value(), Var { .stack_loc = gen->m_stack_size } });
+                gen->m_vars.insert({stmt_let->ident.value.value(), Var{.stack_loc = gen->m_stack_size}});
                 gen->gen_expr(stmt_let->expr);
             }
         };
 
-        StmtVisitor visitor { .gen = this };
+        StmtVisitor visitor{.gen = this};
         std::visit(visitor, stmt->var);
     }
 
     [[nodiscard]] std::string generate()
     {
 
-    #if defined(IPLATFORM_LINUX)
+#if defined(IPLATFORM_LINUX)
         m_output << "global _start\n_start:\n";
-    #elif defined(IPLATFORM_WINDOWS)
+#elif defined(IPLATFORM_WINDOWS)
         m_output << ".section .text\n";
         m_output << ".global main\n";
         m_output << "\n";
         m_output << "main:\n";
         m_output << "    pushq %rbp\n";
         m_output << "    movq %rsp, %rbp\n";
-    #endif
+#endif
 
-        for (const NodeStmt* stmt : m_prog.stmts)
+        for (const NodeStmt *stmt : m_prog.stmts)
             gen_stmt(stmt);
 
-    #if defined(IPLATFORM_LINUX)
+#if defined(IPLATFORM_LINUX)
         m_output << "    mov rax, 60\n";
         m_output << "    mov rdi, 0\n";
         m_output << "    syscall\n";
-    #elif defined(IPLATFORM_WINDOWS)
+#elif defined(IPLATFORM_WINDOWS)
         m_output << "    movl $0, %eax\n";
         m_output << "    movq %rbp, %rsp\n";
         m_output << "    popq %rbp\n";
         m_output << "    ret\n";
-    #endif
+#endif
 
         return m_output.str();
-
     }
 
 private:
-
-    void push(const std::string& reg)
+    void push(const std::string &reg)
     {
 
-    #if defined(IPLATFORM_LINUX)
+#if defined(IPLATFORM_LINUX)
         m_output << "    push " << reg << "\n";
-    #elif defined(IPLATFORM_WINDOWS)
+#elif defined(IPLATFORM_WINDOWS)
         m_output << "    pushq %" << reg << "\n";
-    #endif
+#endif
 
         m_stack_size++;
     }
 
-    void pop(const std::string& reg)
+    void pop(const std::string &reg)
     {
 
-    #if defined(IPLATFORM_LINUX)
+#if defined(IPLATFORM_LINUX)
         m_output << "    pop " << reg << "\n";
-    #elif defined(IPLATFORM_WINDOWS)
+#elif defined(IPLATFORM_WINDOWS)
         m_output << "    popq %" << reg << "\n";
-    #endif
+#endif
         m_stack_size--;
-
     }
 
     struct Var
@@ -204,5 +269,5 @@ private:
     const NodeProg m_prog;
     std::stringstream m_output;
     size_t m_stack_size = 0;
-    std::map<std::string, Var> m_vars {};
+    std::map<std::string, Var> m_vars{};
 };

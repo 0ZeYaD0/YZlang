@@ -12,10 +12,12 @@ enum class TokenType
     open_paren,
     close_paren,
     ident,
-    let,
+    val,
     eq,
     plus,
-    star
+    star,
+    sub,
+    div
 };
 
 struct Token
@@ -23,7 +25,6 @@ struct Token
     TokenType type;
     std::optional<std::string> value;
 };
-
 
 struct NodeTermIntLit
 {
@@ -37,49 +38,82 @@ struct NodeTermIdent
 
 struct NodeExpr;
 
-struct NodeBinExprAdd
+struct NodeTermParen
 {
-    NodeExpr* lhs;
-    NodeExpr* rhs;
+    NodeExpr *expr;
 };
 
-struct NodeBinExprMulti {
-    NodeExpr* lhs;
-    NodeExpr* rhs;
+struct NodeBinExprAdd
+{
+    NodeExpr *lhs;
+    NodeExpr *rhs;
+};
+
+struct NodeBinExprMulti
+{
+    NodeExpr *lhs;
+    NodeExpr *rhs;
+};
+
+struct NodeBinExprSub
+{
+    NodeExpr *lhs;
+    NodeExpr *rhs;
+};
+
+struct NodeBinExprDiv
+{
+    NodeExpr *lhs;
+    NodeExpr *rhs;
 };
 
 struct NodeBinExpr
 {
-    NodeBinExprAdd* add;
+    std::variant<NodeBinExprAdd *, NodeBinExprMulti *, NodeBinExprDiv *, NodeBinExprSub *> var;
 };
 
 struct NodeTerm
 {
-    std::variant<NodeTermIntLit*, NodeTermIdent*> var;
+    std::variant<NodeTermIntLit *, NodeTermIdent *, NodeTermParen *> var;
 };
 
 struct NodeExpr
 {
-    std::variant<NodeTerm*, NodeBinExpr*> var;
+    std::variant<NodeTerm *, NodeBinExpr *> var;
 };
 
 struct NodeStmtExit
 {
-    NodeExpr* expr;
+    NodeExpr *expr;
 };
 
 struct NodeStmtLet
 {
     Token ident;
-    NodeExpr* expr;
+    NodeExpr *expr;
 };
 
 struct NodeStmt
 {
-    std::variant<NodeStmtExit*, NodeStmtLet*> var;
+    std::variant<NodeStmtExit *, NodeStmtLet *> var;
 };
 
 struct NodeProg
 {
-    std::vector<NodeStmt*> stmts;
+    std::vector<NodeStmt *> stmts;
 };
+
+std::optional<int> bin_prec(TokenType type)
+{
+    switch (type)
+    {
+    case TokenType::sub:
+    case TokenType::plus:
+        return 0;
+    case TokenType::div:
+    case TokenType::star:
+        return 1;
+    default:
+        return {};
+    }
+}

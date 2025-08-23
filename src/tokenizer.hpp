@@ -7,7 +7,8 @@
 #include "core/nodes.hpp"
 #include "YLogger/logger.h"
 
-class Tokenizer {
+class Tokenizer
+{
 
 public:
     inline explicit Tokenizer(const std::string &src)
@@ -36,63 +37,58 @@ public:
                 }
                 else if (buff == "val")
                 {
-                    tokens.push_back({.type = TokenType::let});
+                    tokens.push_back({.type = TokenType::val});
                 }
                 else
                 {
                     tokens.push_back({.type = TokenType::ident, .value = buff});
                 }
                 buff.clear();
+                continue;
             }
             else if (std::isdigit(peek().value()))
             {
                 buff.push_back(consume());
-
                 while (peek().has_value() && std::isdigit(peek().value()))
                 {
                     buff.push_back(consume());
                 }
-
                 tokens.push_back({.type = TokenType::_int_lit, .value = buff});
                 buff.clear();
+                continue;
             }
-            else if (peek().value() == '(')
-            {
-                consume();
-                tokens.push_back({.type = TokenType::open_paren});
-            }
-            else if (peek().value() == ')')
-            {
-                consume();
-                tokens.push_back({.type = TokenType::close_paren});
-            }
-            else if (peek().value() == ';')
-            {
-                consume();
-                tokens.push_back({.type = TokenType::semi});
-            }
-            else if (peek().value() == '=')
-            {
-                consume();
-                tokens.push_back({.type = TokenType::eq});
-            }
-            else if (peek().value() == '+')
-            {
-                consume();
-                tokens.push_back({.type = TokenType::plus});
-            }
-            else if(peek().value() == '*')
-            {
-                consume();
-                tokens.push_back({.type = TokenType::star});
-            }
-            else if(std::isspace(peek().value()))
+            else if (std::isspace(peek().value()))
             {
                 consume();
                 continue;
-            } 
-            else 
+            }
+            switch (consume())
             {
+            case '(':
+                tokens.push_back({.type = TokenType::open_paren});
+                break;
+            case ')':
+                tokens.push_back({.type = TokenType::close_paren});
+                break;
+            case ';':
+                tokens.push_back({.type = TokenType::semi});
+                break;
+            case '=':
+                tokens.push_back({.type = TokenType::eq});
+                break;
+            case '+':
+                tokens.push_back({.type = TokenType::plus});
+                break;
+            case '*':
+                tokens.push_back({.type = TokenType::star});
+                break;
+            case '-':
+                tokens.push_back({.type = TokenType::sub});
+                break;
+            case '/':
+                tokens.push_back({.type = TokenType::div});
+                break;
+            default:
                 LLOG(RED_TEXT("Token Type not in known token list....\n"));
                 exit(EXIT_FAILURE);
             }
