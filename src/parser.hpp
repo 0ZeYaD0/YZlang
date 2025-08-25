@@ -57,32 +57,26 @@ public:
 
     std::optional<NodeExpr *> parse_expr(int min_prec = 0)
     {
-        std::optional<NodeTerm *> term_lhs_opt = parse_term();
-        if (!term_lhs_opt.has_value())
-        {
+        auto term_lhs_opt = parse_term();
+        if (!term_lhs_opt)
             return {};
-        }
         auto lhs_expr = m_alloc.alloc<NodeExpr>();
         lhs_expr->var = term_lhs_opt.value();
 
         while (true)
         {
-            std::optional<Token> curr_tok = peek();
-            if (!curr_tok.has_value())
-            {
+            auto curr_tok = peek();
+            if (!curr_tok)
                 break;
-            }
 
-            std::optional<int> prec = bin_prec(curr_tok->type);
+            auto prec = bin_prec(curr_tok->type);
             if (!prec.has_value() || prec.value() < min_prec)
-            {
                 break;
-            }
 
             Token op = consume();
             int next_min_prec = prec.value() + 1;
             auto rhs_expr_opt = parse_expr(next_min_prec);
-            if (!rhs_expr_opt.has_value())
+            if (!rhs_expr_opt)
             {
                 LLOG(RED_TEXT("Unable to parse expression on right-hand side of operator\n"));
                 exit(EXIT_FAILURE);
@@ -127,51 +121,88 @@ public:
 
     std::optional<NodeStmt *> parse_stmt()
     {
-        if (peek().value().type == TokenType::exit && peek(1).has_value() && peek(1).value().type == TokenType::open_paren)
+        if (peek().value().type == TokenType::exit &&
+            peek(1).has_value() && peek(1).value().type == TokenType::open_paren)
         {
             consume();
             consume();
             auto stmt_exit = m_alloc.alloc<NodeStmtExit>();
-
             if (auto node_expr = parse_expr())
-            {
                 stmt_exit->expr = node_expr.value();
-            }
             else
             {
                 LLOG(RED_TEXT("Invalid Expression\n"));
                 exit(EXIT_FAILURE);
             }
-
             try_consume(TokenType::close_paren, "Expected `)`");
             try_consume(TokenType::semi, "Expected `;`");
-
             auto stmt = m_alloc.alloc<NodeStmt>();
             stmt->var = stmt_exit;
-
             return stmt;
         }
-        else if (
-            peek().has_value() && peek().value().type == TokenType::val && peek(1).has_value() && peek(1).value().type == TokenType::ident && peek(2).has_value() && peek(2).value().type == TokenType::eq)
+        else if (peek().has_value() && peek().value().type == TokenType::val &&
+                 peek(1).has_value() && peek(1).value().type == TokenType::ident &&
+                 peek(2).has_value() && peek(2).value().type == TokenType::eq)
         {
             consume();
             auto stmt_let = m_alloc.alloc<NodeStmtLet>();
             stmt_let->ident = consume();
             consume();
             if (auto expr = parse_expr())
-            {
                 stmt_let->expr = expr.value();
-            }
             else
             {
                 std::cerr << "Invalid expression" << std::endl;
                 exit(EXIT_FAILURE);
             }
-
             try_consume(TokenType::semi, "Expected `;`");
             auto stmt = m_alloc.alloc<NodeStmt>();
             stmt->var = stmt_let;
-
+            return stmt;
+        }
+        else if (peek().has_value() && peek()->type == TokenType::out)
+        {
+            consume();
+            try_consume(TokenType::open_paren, "Expected '(' after print");
+            auto expr = parse_expr();
+            if (!expr)
+            {
+                LLOG(RED_TEXT("Invalid expression in print\n"));
+                exit(EXIT_FAILURE);
+            }
+            try_consume(TokenType::close_paren, "Expected ')'");
+            try_consume(TokenType::semi, "Expected ';'");
+            auto stmt_out = m_alloc.alloc<NodeStmtOut>();
+            stmt_out->expr = expr.value();
+            auto stmt = m_alloc.alloc<NodeStmt>();
+            stmt->var = stmt_out;
+            return stmt;
+        }
+        else if (try_consume(TokenType::open_curly))
+        {
+            auto block = m_alloc.alloc<NodeStmtBlock>();
+            while (true)
+            {
+                if (!peek().has_value())
+                {
+                    LLOG(RED_TEXT("Unterminated block\n"));
+                    exit(EXIT_FAILURE);
+                }
+                if (peek()->type == TokenType::close_curly)
+                {
+                    consume();
+                    break;
+                }
+                if (auto inner = parse_stmt())
+                    block->stmts.push_back(inner.value());
+                else
+                {
+                    LLOG(RED_TEXT("Invalid statement inside block\n"));
+                    exit(EXIT_FAILURE);
+                }
+            }
+            auto stmt = m_alloc.alloc<NodeStmt>();
+            stmt->var = block;
             return stmt;
         }
         else
@@ -186,16 +217,13 @@ public:
         while (peek().has_value())
         {
             if (auto stmt = parse_stmt())
-            {
                 prog.stmts.push_back(stmt.value());
-            }
             else
             {
                 LLOG(RED_TEXT("Invalid Statement\n"));
                 exit(EXIT_FAILURE);
             }
         }
-
         return prog;
     }
 
@@ -203,13 +231,8 @@ private:
     [[nodiscard]] inline std::optional<Token> peek(int offset = 0) const
     {
         if (m_idx + offset >= m_tokens.size())
-        {
             return {};
-        }
-        else
-        {
-            return m_tokens.at(m_idx + offset);
-        }
+        return m_tokens.at(m_idx + offset);
     }
 
     inline Token consume()
@@ -220,26 +243,16 @@ private:
     inline Token try_consume(TokenType type, const std::string &err_msg)
     {
         if (peek().has_value() && peek().value().type == type)
-        {
             return consume();
-        }
-        else
-        {
-            LLOG(RED_TEXT(err_msg), "\n");
-            exit(EXIT_FAILURE);
-        }
+        LLOG(RED_TEXT(err_msg), "\n");
+        exit(EXIT_FAILURE);
     }
 
     inline std::optional<Token> try_consume(TokenType type)
     {
         if (peek().has_value() && peek().value().type == type)
-        {
             return consume();
-        }
-        else
-        {
-            return {};
-        }
+        return {};
     }
 
     const std::vector<Token> m_tokens;

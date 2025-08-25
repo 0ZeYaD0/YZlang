@@ -27,41 +27,35 @@ public:
             {
                 buff.push_back(consume());
                 while (peek().has_value() && std::isalnum(peek().value()))
-                {
                     buff.push_back(consume());
-                }
 
                 if (buff == "exit")
-                {
                     tokens.push_back({.type = TokenType::exit});
-                }
                 else if (buff == "val")
-                {
                     tokens.push_back({.type = TokenType::val});
-                }
+                else if (buff == "out")
+                    tokens.push_back({.type = TokenType::out});
                 else
-                {
                     tokens.push_back({.type = TokenType::ident, .value = buff});
-                }
+
                 buff.clear();
                 continue;
             }
-            else if (std::isdigit(peek().value()))
+            if (std::isdigit(peek().value()))
             {
                 buff.push_back(consume());
                 while (peek().has_value() && std::isdigit(peek().value()))
-                {
                     buff.push_back(consume());
-                }
                 tokens.push_back({.type = TokenType::_int_lit, .value = buff});
                 buff.clear();
                 continue;
             }
-            else if (std::isspace(peek().value()))
+            if (std::isspace(peek().value()))
             {
                 consume();
                 continue;
             }
+
             switch (consume())
             {
             case '(':
@@ -69,6 +63,12 @@ public:
                 break;
             case ')':
                 tokens.push_back({.type = TokenType::close_paren});
+                break;
+            case '{':
+                tokens.push_back({.type = TokenType::open_curly});
+                break;
+            case '}':
+                tokens.push_back({.type = TokenType::close_curly});
                 break;
             case ';':
                 tokens.push_back({.type = TokenType::semi});
@@ -79,20 +79,21 @@ public:
             case '+':
                 tokens.push_back({.type = TokenType::plus});
                 break;
-            case '*':
-                tokens.push_back({.type = TokenType::star});
-                break;
             case '-':
                 tokens.push_back({.type = TokenType::sub});
+                break;
+            case '*':
+                tokens.push_back({.type = TokenType::star});
                 break;
             case '/':
                 tokens.push_back({.type = TokenType::div});
                 break;
             default:
-                LLOG(RED_TEXT("Token Type not in known token list....\n"));
+                LLOG(RED_TEXT("Unknown character in source\n"));
                 exit(EXIT_FAILURE);
             }
         }
+
         m_idx = 0;
         return tokens;
     }
