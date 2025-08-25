@@ -17,7 +17,10 @@ enum class TokenType
     plus,
     star,
     sub,
-    div
+    div,
+    open_curly,
+    close_curly,
+    out
 };
 
 struct Token
@@ -93,9 +96,21 @@ struct NodeStmtLet
     NodeExpr *expr;
 };
 
+struct NodeStmtOut
+{
+    NodeExpr *expr;
+};
+
+struct NodeStmt;
+
+struct NodeStmtScope
+{
+    std::vector<NodeStmt *> stmts;
+};
+
 struct NodeStmt
 {
-    std::variant<NodeStmtExit *, NodeStmtLet *> var;
+    std::variant<NodeStmtExit *, NodeStmtLet *, NodeStmtOut *, NodeStmtScope *> var;
 };
 
 struct NodeProg

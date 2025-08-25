@@ -151,6 +151,55 @@ public:
 
             return stmt;
         }
+        else if (peek().value().type == TokenType::out && peek(1).has_value() && peek(1).value().type == TokenType::open_paren)
+        {
+            consume();
+            consume();
+            auto stmt_out = m_alloc.alloc<NodeStmtOut>();
+
+            if (auto node_expr = parse_expr())
+            {
+                stmt_out->expr = node_expr.value();
+            }
+            else
+            {
+                LLOG(RED_TEXT("Invalid Expression\n"));
+                exit(EXIT_FAILURE);
+            }
+
+            try_consume(TokenType::close_paren, "Expected `)`");
+            try_consume(TokenType::semi, "Expected `;`");
+
+            auto stmt = m_alloc.alloc<NodeStmt>();
+            stmt->var = stmt_out;
+
+            return stmt;
+        }
+        else if (peek().value().type == TokenType::open_curly)
+        {
+            consume();
+            auto stmt_scope = m_alloc.alloc<NodeStmtScope>();
+            
+            while (peek().has_value() && peek().value().type != TokenType::close_curly)
+            {
+                if (auto stmt = parse_stmt())
+                {
+                    stmt_scope->stmts.push_back(stmt.value());
+                }
+                else
+                {
+                    LLOG(RED_TEXT("Invalid Statement in scope\n"));
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            try_consume(TokenType::close_curly, "Expected `}`");
+
+            auto stmt = m_alloc.alloc<NodeStmt>();
+            stmt->var = stmt_scope;
+
+            return stmt;
+        }
         else if (
             peek().has_value() && peek().value().type == TokenType::val && peek(1).has_value() && peek(1).value().type == TokenType::ident && peek(2).has_value() && peek(2).value().type == TokenType::eq)
         {

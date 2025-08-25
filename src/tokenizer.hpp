@@ -39,6 +39,10 @@ public:
                 {
                     tokens.push_back({.type = TokenType::val});
                 }
+                else if (buff == "out")
+                {
+                    tokens.push_back({.type = TokenType::out});
+                }
                 else
                 {
                     tokens.push_back({.type = TokenType::ident, .value = buff});
@@ -87,6 +91,12 @@ public:
                 break;
             case '/':
                 tokens.push_back({.type = TokenType::div});
+                break;
+            case '{':
+                tokens.push_back({.type = TokenType::open_curly});
+                break;
+            case '}':
+                tokens.push_back({.type = TokenType::close_curly});
                 break;
             default:
                 LLOG(RED_TEXT("Token Type not in known token list....\n"));
