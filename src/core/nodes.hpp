@@ -20,7 +20,8 @@ enum class TokenType
     div,
     out,
     open_curly,
-    close_curly
+    close_curly,
+    if_
 };
 
 struct Token
@@ -108,13 +109,20 @@ struct NodeStmtBlock
     std::vector<NodeStmt *> stmts;
 };
 
+struct NodeStmtIf
+{
+    NodeExpr *expr;
+    NodeStmtBlock *scope;
+};
+
 struct NodeStmt
 {
     std::variant<
         NodeStmtExit *,
         NodeStmtLet *,
         NodeStmtOut *,
-        NodeStmtBlock *>
+        NodeStmtBlock *,
+        NodeStmtIf *>
         var;
 };
 

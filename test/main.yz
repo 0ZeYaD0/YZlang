@@ -1,20 +1,17 @@
 val x = 1;
 val y = 3;
-{
-    val y = 1 + x;
-    {
-        val y = 1;
-        val x = 0;
-        {
-            val x = 11;
-            out(x);
-        }
-        out(y);
-    }
-    val x = 2312;
-    out(y);
+
+if (x){
     out(x);
+    val x = 0;
+    if (y){
+        out(y);
+        val y = 0;
+        if(x)
+        {
+            exit(1);
+        }
+    }
 }
 out(y);
-out(x);
 exit(0);

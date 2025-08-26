@@ -119,6 +119,38 @@ public:
         return lhs_expr;
     }
 
+    std::optional<NodeStmtBlock *> parse_scope()
+    {
+        if (!try_consume(TokenType::open_curly).has_value())
+        {
+            return {};
+        }
+
+        auto block = m_alloc.alloc<NodeStmtBlock>();
+        while (true)
+        {
+            if (!peek().has_value())
+            {
+                LLOG(RED_TEXT("Unterminated block\n"));
+                exit(EXIT_FAILURE);
+            }
+            if (peek()->type == TokenType::close_curly)
+            {
+                consume();
+                break;
+            }
+            if (auto inner = parse_stmt())
+                block->stmts.push_back(inner.value());
+            else
+            {
+                LLOG(RED_TEXT("Invalid statement inside block\n"));
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        return block;
+    }
+
     std::optional<NodeStmt *> parse_stmt()
     {
         if (peek().value().type == TokenType::exit &&
@@ -178,33 +210,40 @@ public:
             stmt->var = stmt_out;
             return stmt;
         }
-        else if (try_consume(TokenType::open_curly))
+        else if (auto block = parse_scope())
         {
-            auto block = m_alloc.alloc<NodeStmtBlock>();
-            while (true)
-            {
-                if (!peek().has_value())
-                {
-                    LLOG(RED_TEXT("Unterminated block\n"));
-                    exit(EXIT_FAILURE);
-                }
-                if (peek()->type == TokenType::close_curly)
-                {
-                    consume();
-                    break;
-                }
-                if (auto inner = parse_stmt())
-                    block->stmts.push_back(inner.value());
-                else
-                {
-                    LLOG(RED_TEXT("Invalid statement inside block\n"));
-                    exit(EXIT_FAILURE);
-                }
-            }
             auto stmt = m_alloc.alloc<NodeStmt>();
-            stmt->var = block;
+            stmt->var = block.value();
             return stmt;
         }
+        else if (auto if_ = try_consume(TokenType::if_))
+        {
+            try_consume(TokenType::open_paren, "Expected '('");
+            auto stmt_if = m_alloc.alloc<NodeStmtIf>();
+            if (auto expr = parse_expr())
+            {
+                stmt_if->expr = expr.value();
+            }
+            else
+            {
+                LLOG(RED_TEXT("Invalid Expression\n"));
+                exit(EXIT_FAILURE);
+            }
+            try_consume(TokenType::close_paren, "Expected ')'");
+            if (auto scope = parse_scope())
+            {
+                stmt_if->scope = scope.value();
+            }
+            else
+            {
+                LLOG(RED_TEXT("Invalid scope\n"));
+                exit(EXIT_FAILURE);
+            }
+            auto stmt = m_alloc.alloc<NodeStmt>();
+            stmt->var = stmt_if;
+            return stmt;
+        }
+
         else
         {
             return {};

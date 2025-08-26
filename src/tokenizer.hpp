@@ -35,6 +35,8 @@ public:
                     tokens.push_back({.type = TokenType::val});
                 else if (buff == "out")
                     tokens.push_back({.type = TokenType::out});
+                else if (buff == "if")
+                    tokens.push_back({.type = TokenType::if_});
                 else
                     tokens.push_back({.type = TokenType::ident, .value = buff});
 

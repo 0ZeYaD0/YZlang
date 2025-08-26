@@ -165,28 +165,33 @@ public:
             void operator()(const NodeStmtExit *stmt_exit) const
             {
                 gen.gen_expr(stmt_exit->expr);
-#if defined(IPLATFORM_WINDOWS)
                 gen.pop("rax");
+
+#if defined(IPLATFORM_WINDOWS)
+                gen.m_output << "    movl %eax, %ecx\n";
+                gen.m_output << "    subq $32, %rsp\n";
+                gen.m_output << "    call exit\n";
+                gen.m_output << "    addq $32, %rsp\n";
 #elif defined(IPLATFORM_LINUX)
-                // For linux, the exit code is moved to rdi before syscall
+                gen.m_output << "    mov rdi, rax\n";
+                gen.m_output << "    mov rax, 60\n";
+                gen.m_output << "    syscall\n";
 #endif
                 gen.m_has_explicit_exit = true;
             }
 
             void operator()(const NodeStmtLet *stmt_let) const
             {
-                // Check if identifier is already used in the current scope.
                 auto it = std::find_if(gen.m_vars.cbegin(), gen.m_vars.cend(), [&](const Var &var)
                                        {
                     bool in_current_scope = false;
                     if (!gen.m_scopes.empty()) {
                         size_t current_scope_start_index = gen.m_scopes.back();
-                        // This determines if the variable 'var' is inside the current scope
                         size_t var_index = &var - &gen.m_vars[0];
                         if (var_index >= current_scope_start_index) {
                             in_current_scope = true;
                         }
-                    } else { // Global scope
+                    } else { 
                         in_current_scope = true;
                     }
                     return in_current_scope && var.name == stmt_let->ident.value.value(); });
@@ -206,14 +211,12 @@ public:
                 gen.pop("rax");
 
 #if defined(IPLATFORM_WINDOWS)
-                // Use total variable count for alignment.
-                // This logic might need to be more robust depending on calling convention specifics.
                 bool is_stack_misaligned = (gen.m_vars.size() * 8) % 16 != 0;
 
                 if (is_stack_misaligned)
-                    gen.m_output << "    subq $40, %rsp\n"; // 32 shadow + 8 align
+                    gen.m_output << "    subq $40, %rsp\n";
                 else
-                    gen.m_output << "    subq $32, %rsp\n"; // 32 shadow
+                    gen.m_output << "    subq $32, %rsp\n";
 
                 gen.m_output << "    leaq .LC_fmt_int(%rip), %rcx\n";
                 gen.m_output << "    movl %eax, %edx\n";
@@ -231,10 +234,27 @@ public:
 
             void operator()(const NodeStmtBlock *block) const
             {
-                gen.push_scope();
-                for (auto *s : block->stmts)
-                    gen.gen_stmt(s);
-                gen.pop_scope();
+                gen.gen_stmt_block(block);
+            }
+
+            void operator()(const NodeStmtIf *stmt_if) const
+            {
+                gen.gen_expr(stmt_if->expr);
+                gen.pop("rax");
+
+                static size_t label_count = 0;
+                std::string end_label = "if_end_" + std::to_string(label_count++);
+
+#if defined(IPLATFORM_WINDOWS)
+                gen.m_output << "    testl %eax, %eax\n";
+                gen.m_output << "    jz " << end_label << "\n";
+#elif defined(IPLATFORM_LINUX)
+                gen.m_output << "    test eax, eax\n";
+                gen.m_output << "    jz " << end_label << "\n";
+#endif
+
+                gen.gen_stmt_block(stmt_if->scope);
+                gen.m_output << end_label << ":\n";
             }
         };
 
@@ -249,6 +269,7 @@ public:
         m_output << ".LC_fmt_int:\n    .string \"%d\\n\"\n";
         m_output << ".section .text\n";
         m_output << ".extern printf\n";
+        m_output << ".extern exit\n";
         m_output << ".global main\n";
         m_output << "main:\n";
         m_output << "    pushq %rbp\n";
@@ -304,7 +325,7 @@ private:
     struct Var
     {
         std::string name;
-        size_t stack_loc; // For Linux: offset from stack top. For Windows: index for rbp offset.
+        size_t stack_loc;
     };
 
     std::vector<Var> m_vars{};
@@ -346,14 +367,19 @@ private:
 
         const Var &var = *it;
 #if defined(IPLATFORM_WINDOWS)
-        // For Windows, offset is from RBP. stack_loc is the Nth variable declared.
-        // The +1 is because RBP is pushed first, so first var is at rbp-8
         *out_offset = (&var - &m_vars[0] + 1) * 8;
 #elif defined(IPLATFORM_LINUX)
-        // For Linux, offset is from RSP.
         *out_offset = (m_stack_size - var.stack_loc - 1) * 8;
 #endif
         return &var;
+    }
+
+    void gen_stmt_block(const NodeStmtBlock *block)
+    {
+        push_scope();
+        for (auto *s : block->stmts)
+            gen_stmt(s);
+        pop_scope();
     }
 
     const NodeProg m_prog;
