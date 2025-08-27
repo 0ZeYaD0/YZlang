@@ -18,18 +18,14 @@ public:
     {
         if (auto int_lit = try_consume(TokenType::_int_lit))
         {
-            auto term_int_lit = m_alloc.alloc<NodeTermIntLit>();
-            term_int_lit->int_lit = int_lit.value();
-            auto term = m_alloc.alloc<NodeTerm>();
-            term->var = term_int_lit;
+            auto term_int_lit = m_alloc.emplace<NodeTermIntLit>(int_lit.value());
+            auto term = m_alloc.emplace<NodeTerm>(term_int_lit);
             return term;
         }
         else if (auto ident = try_consume(TokenType::ident))
         {
-            auto expr_ident = m_alloc.alloc<NodeTermIdent>();
-            expr_ident->ident = ident.value();
-            auto term = m_alloc.alloc<NodeTerm>();
-            term->var = expr_ident;
+            auto expr_ident = m_alloc.emplace<NodeTermIdent>(ident.value());
+            auto term = m_alloc.emplace<NodeTerm>(expr_ident);
             return term;
         }
         else if (try_consume(TokenType::open_paren))
@@ -42,11 +38,8 @@ public:
             }
             try_consume(TokenType::close_paren, "Expected ')' after expression");
 
-            auto term_paren = m_alloc.alloc<NodeTermParen>();
-            term_paren->expr = expr.value();
-
-            auto term = m_alloc.alloc<NodeTerm>();
-            term->var = term_paren;
+            auto term_paren = m_alloc.emplace<NodeTermParen>(expr.value());
+            auto term = m_alloc.emplace<NodeTerm>(term_paren);
             return term;
         }
         else
@@ -60,8 +53,7 @@ public:
         auto term_lhs_opt = parse_term();
         if (!term_lhs_opt)
             return {};
-        auto lhs_expr = m_alloc.alloc<NodeExpr>();
-        lhs_expr->var = term_lhs_opt.value();
+        auto lhs_expr = m_alloc.emplace<NodeExpr>(term_lhs_opt.value());
 
         while (true)
         {
@@ -85,35 +77,25 @@ public:
             auto bin_expr = m_alloc.alloc<NodeBinExpr>();
             if (op.type == TokenType::plus)
             {
-                auto add = m_alloc.alloc<NodeBinExprAdd>();
-                add->lhs = lhs_expr;
-                add->rhs = rhs_expr_opt.value();
+                auto add = m_alloc.emplace<NodeBinExprAdd>(lhs_expr, rhs_expr_opt.value());
                 bin_expr->var = add;
             }
             else if (op.type == TokenType::star)
             {
-                auto multi = m_alloc.alloc<NodeBinExprMulti>();
-                multi->lhs = lhs_expr;
-                multi->rhs = rhs_expr_opt.value();
+                auto multi = m_alloc.emplace<NodeBinExprMulti>(lhs_expr, rhs_expr_opt.value());
                 bin_expr->var = multi;
             }
             else if (op.type == TokenType::sub)
             {
-                auto sub = m_alloc.alloc<NodeBinExprSub>();
-                sub->lhs = lhs_expr;
-                sub->rhs = rhs_expr_opt.value();
+                auto sub = m_alloc.emplace<NodeBinExprSub>(lhs_expr, rhs_expr_opt.value());
                 bin_expr->var = sub;
             }
             else if (op.type == TokenType::div)
             {
-                auto div = m_alloc.alloc<NodeBinExprDiv>();
-                div->lhs = lhs_expr;
-                div->rhs = rhs_expr_opt.value();
+                auto div = m_alloc.emplace<NodeBinExprDiv>(lhs_expr, rhs_expr_opt.value());
                 bin_expr->var = div;
             }
-
-            auto new_lhs_expr = m_alloc.alloc<NodeExpr>();
-            new_lhs_expr->var = bin_expr;
+            auto new_lhs_expr = m_alloc.emplace<NodeExpr>(bin_expr);
             lhs_expr = new_lhs_expr;
         }
         return lhs_expr;
@@ -151,6 +133,54 @@ public:
         return block;
     }
 
+    std::optional<NodeIfPred *> parse_if_pred()
+    {
+        if (try_consume(TokenType::elif))
+        {
+            try_consume(TokenType::open_paren, "Expected '('");
+            auto elif = m_alloc.alloc<NodeIfPredElif>();
+            if (auto expr = parse_expr())
+            {
+                elif->expr = expr.value();
+            }
+            else
+            {
+                LLOG(RED_TEXT("Expected exprission\n"));
+                exit(EXIT_FAILURE);
+            }
+
+            try_consume(TokenType::close_paren, "Expected ')'");
+            if (auto scope = parse_scope())
+            {
+                elif->scope = scope.value();
+            }
+            else
+            {
+                LLOG(RED_TEXT("Expected scope\n"));
+                exit(EXIT_FAILURE);
+            }
+            elif->pred = parse_if_pred();
+            auto pred = m_alloc.emplace<NodeIfPred>(elif);
+            return pred;
+        }
+        if (try_consume(TokenType::else_))
+        {
+            auto else_ = m_alloc.alloc<NodeIfPredElse>();
+            if (auto scope = parse_scope())
+            {
+                else_->scope = scope.value();
+            }
+            else
+            {
+                LLOG(RED_TEXT("Expected scope\n"));
+                exit(EXIT_FAILURE);
+            }
+            auto pred = m_alloc.emplace<NodeIfPred>(else_);
+            return pred;
+        }
+        return {};
+    }
+
     std::optional<NodeStmt *> parse_stmt()
     {
         if (peek().value().type == TokenType::exit &&
@@ -168,8 +198,7 @@ public:
             }
             try_consume(TokenType::close_paren, "Expected `)`");
             try_consume(TokenType::semi, "Expected `;`");
-            auto stmt = m_alloc.alloc<NodeStmt>();
-            stmt->var = stmt_exit;
+            auto stmt = m_alloc.emplace<NodeStmt>(stmt_exit);
             return stmt;
         }
         else if (peek().has_value() && peek().value().type == TokenType::val &&
@@ -188,8 +217,7 @@ public:
                 exit(EXIT_FAILURE);
             }
             try_consume(TokenType::semi, "Expected `;`");
-            auto stmt = m_alloc.alloc<NodeStmt>();
-            stmt->var = stmt_let;
+            auto stmt = m_alloc.emplace<NodeStmt>(stmt_let);
             return stmt;
         }
         else if (peek().has_value() && peek()->type == TokenType::out)
@@ -206,14 +234,12 @@ public:
             try_consume(TokenType::semi, "Expected ';'");
             auto stmt_out = m_alloc.alloc<NodeStmtOut>();
             stmt_out->expr = expr.value();
-            auto stmt = m_alloc.alloc<NodeStmt>();
-            stmt->var = stmt_out;
+            auto stmt = m_alloc.emplace<NodeStmt>(stmt_out);
             return stmt;
         }
         else if (auto block = parse_scope())
         {
-            auto stmt = m_alloc.alloc<NodeStmt>();
-            stmt->var = block.value();
+            auto stmt = m_alloc.emplace<NodeStmt>(block.value());
             return stmt;
         }
         else if (auto if_ = try_consume(TokenType::if_))
@@ -239,8 +265,8 @@ public:
                 LLOG(RED_TEXT("Invalid scope\n"));
                 exit(EXIT_FAILURE);
             }
-            auto stmt = m_alloc.alloc<NodeStmt>();
-            stmt->var = stmt_if;
+            stmt_if->pred = parse_if_pred();
+            auto stmt = m_alloc.emplace<NodeStmt>(stmt_if);
             return stmt;
         }
 

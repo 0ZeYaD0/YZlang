@@ -1,17 +1,32 @@
 val x = 1;
 val y = 3;
 
-if (x){
-    out(x);
-    val x = 0;
-    if (y){
-        out(y);
-        val y = 0;
-        if(x)
+if(x - 1){
+    if(x - 1)
+    {
+        out(x);
+    }
+    elif(y - 3)
+    {
+        out(x);
+    }
+    else
+    {
+        val y = 11;
+        if(y - 11)
         {
-            exit(1);
+            out(1);
+        }
+        elif(y + 12)
+        {
+            val y = y + 12;
+            out(y);
         }
     }
 }
-out(y);
+elif(y)
+{
+    out(y);
+}
+
 exit(0);

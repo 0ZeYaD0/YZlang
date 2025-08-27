@@ -243,17 +243,26 @@ public:
                 gen.pop("rax");
 
                 static size_t label_count = 0;
+                std::string else_label = "if_else_" + std::to_string(label_count);
                 std::string end_label = "if_end_" + std::to_string(label_count++);
 
 #if defined(IPLATFORM_WINDOWS)
                 gen.m_output << "    testl %eax, %eax\n";
-                gen.m_output << "    jz " << end_label << "\n";
+                gen.m_output << "    jz " << else_label << "\n";
 #elif defined(IPLATFORM_LINUX)
                 gen.m_output << "    test eax, eax\n";
-                gen.m_output << "    jz " << end_label << "\n";
+                gen.m_output << "    jz " << else_label << "\n";
 #endif
 
                 gen.gen_stmt_block(stmt_if->scope);
+                gen.m_output << "    jmp " << end_label << "\n";
+                gen.m_output << else_label << ":\n";
+
+                if (stmt_if->pred.has_value())
+                {
+                    gen.gen_if_pred(stmt_if->pred.value(), end_label);
+                }
+
                 gen.m_output << end_label << ":\n";
             }
         };
@@ -299,6 +308,49 @@ public:
         m_output << "    syscall\n";
 #endif
         return m_output.str();
+    }
+
+    void gen_if_pred(const NodeIfPred *pred, const std::string &end_label)
+    {
+        struct IfPredVisitor
+        {
+            Generator &gen;
+            const std::string &end_label;
+
+            void operator()(const NodeIfPredElif *elif) const
+            {
+                gen.gen_expr(elif->expr);
+                gen.pop("rax");
+
+                static size_t elif_label_count = 0;
+                std::string next_label = "elif_next_" + std::to_string(elif_label_count++);
+
+#if defined(IPLATFORM_WINDOWS)
+                gen.m_output << "    testl %eax, %eax\n";
+                gen.m_output << "    jz " << next_label << "\n";
+#elif defined(IPLATFORM_LINUX)
+                gen.m_output << "    test eax, eax\n";
+                gen.m_output << "    jz " << next_label << "\n";
+#endif
+
+                gen.gen_stmt_block(elif->scope);
+                gen.m_output << "    jmp " << end_label << "\n";
+                gen.m_output << next_label << ":\n";
+
+                if (elif->pred.has_value())
+                {
+                    gen.gen_if_pred(elif->pred.value(), end_label);
+                }
+            }
+
+            void operator()(const NodeIfPredElse *else_pred) const
+            {
+                gen.gen_stmt_block(else_pred->scope);
+            }
+        };
+
+        IfPredVisitor visitor{.gen = *this, .end_label = end_label};
+        std::visit(visitor, pred->var);
     }
 
 private:

@@ -37,6 +37,10 @@ public:
                     tokens.push_back({.type = TokenType::out});
                 else if (buff == "if")
                     tokens.push_back({.type = TokenType::if_});
+                else if (buff == "elif")
+                    tokens.push_back({.type = TokenType::elif});
+                else if (buff == "else")
+                    tokens.push_back({.type = TokenType::else_});
                 else
                     tokens.push_back({.type = TokenType::ident, .value = buff});
 
@@ -50,6 +54,36 @@ public:
                     buff.push_back(consume());
                 tokens.push_back({.type = TokenType::_int_lit, .value = buff});
                 buff.clear();
+                continue;
+            }
+            if (peek().value() == '/' && peek(1).has_value() && peek(1).value() == '/')
+            {
+                consume();
+                consume();
+                while (peek().has_value() && peek().value() != '\n')
+                {
+                    consume();
+                }
+                if (peek().has_value() && peek().value() == '\n')
+                {
+                    consume();
+                }
+                continue;
+            }
+            if (peek().value() == '/' && peek(1).has_value() && peek(1).value() == '*')
+            {
+                consume();
+                consume();
+                while (peek().has_value())
+                {
+                    if (peek().value() == '*' && peek(1).has_value() && peek(1).value() == '/')
+                    {
+                        consume();
+                        consume();
+                        break;
+                    }
+                    consume();
+                }
                 continue;
             }
             if (std::isspace(peek().value()))

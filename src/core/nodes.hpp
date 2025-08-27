@@ -21,7 +21,9 @@ enum class TokenType
     out,
     open_curly,
     close_curly,
-    if_
+    if_,
+    elif,
+    else_
 };
 
 struct Token
@@ -108,11 +110,31 @@ struct NodeStmtBlock
 {
     std::vector<NodeStmt *> stmts;
 };
+struct NodeStmtIf;
+struct NodeIfPred;
+
+struct NodeIfPredElif
+{
+    NodeExpr *expr;
+    NodeStmtBlock *scope;
+    std::optional<NodeIfPred *> pred;
+};
+
+struct NodeIfPredElse
+{
+    NodeStmtBlock *scope;
+};
+
+struct NodeIfPred
+{
+    std::variant<NodeIfPredElif *, NodeIfPredElse *> var;
+};
 
 struct NodeStmtIf
 {
     NodeExpr *expr;
     NodeStmtBlock *scope;
+    std::optional<NodeIfPred *> pred;
 };
 
 struct NodeStmt
