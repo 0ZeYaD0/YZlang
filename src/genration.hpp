@@ -92,10 +92,10 @@ public:
                 gen.m_output << "    sub rbx, rax\n";
                 gen.push("rbx");
 #elif defined(IPLATFORM_WINDOWS)
-                gen.pop("rcx");
-                gen.pop("rax");
-                gen.m_output << "    subl %eax, %ecx\n";
-                gen.push("rcx");
+                gen.pop("rax");                          // LEFT operand
+                gen.pop("rcx");                          // RIGHT operand
+                gen.m_output << "    subl %ecx, %eax\n"; // rax = rax - rcx
+                gen.push("rax");
 #endif
             }
             void operator()(const NodeBinExprMulti *multi)
@@ -125,8 +125,8 @@ public:
                 gen.m_output << "    idiv rbx\n";
                 gen.push("rax");
 #elif defined(IPLATFORM_WINDOWS)
-                gen.pop("rcx");
-                gen.pop("rax");
+                gen.pop("rax"); // LEFT operand (dividend)
+                gen.pop("rcx"); // RIGHT operand (divisor)
                 gen.m_output << "    xorl %edx, %edx\n";
                 gen.m_output << "    idivl %ecx\n";
                 gen.push("rax");
@@ -207,28 +207,55 @@ public:
             }
             void operator()(const NodeStmtOut *stmt_out) const
             {
-                gen.gen_expr(stmt_out->expr);
+                for (const auto *expr : stmt_out->exprs)
+                {
+                    gen.gen_expr(expr);
+                    gen.pop("rax");
+
+#if defined(IPLATFORM_WINDOWS)
+                    bool is_stack_misaligned = (gen.m_vars.size() * 8) % 16 != 0;
+
+                    if (is_stack_misaligned)
+                        gen.m_output << "    subq $40, %rsp\n";
+                    else
+                        gen.m_output << "    subq $32, %rsp\n";
+
+                    gen.m_output << "    leaq .LC_fmt_int(%rip), %rcx\n";
+                    gen.m_output << "    movl %eax, %edx\n";
+                    gen.m_output << "    xorl %eax, %eax\n";
+                    gen.m_output << "    call printf\n";
+
+                    if (is_stack_misaligned)
+                        gen.m_output << "    addq $40, %rsp\n";
+                    else
+                        gen.m_output << "    addq $32, %rsp\n";
+#endif
+                }
+            }
+
+            void operator()(const NodeStmtAssign *stmt_assign) const
+            {
+                gen.gen_expr(stmt_assign->expr);
+
+                const auto &name = stmt_assign->ident.value.value();
+                auto it = std::find_if(gen.m_vars.begin(), gen.m_vars.end(),
+                                       [&](const Var &var)
+                                       { return var.name == name; });
+
+                if (it == gen.m_vars.end())
+                {
+                    LLOG(RED_TEXT("Undeclared identifier in assignment: "), name, "\n");
+                    exit(EXIT_FAILURE);
+                }
+
                 gen.pop("rax");
 
 #if defined(IPLATFORM_WINDOWS)
-                bool is_stack_misaligned = (gen.m_vars.size() * 8) % 16 != 0;
-
-                if (is_stack_misaligned)
-                    gen.m_output << "    subq $40, %rsp\n";
-                else
-                    gen.m_output << "    subq $32, %rsp\n";
-
-                gen.m_output << "    leaq .LC_fmt_int(%rip), %rcx\n";
-                gen.m_output << "    movl %eax, %edx\n";
-                gen.m_output << "    xorl %eax, %eax\n";
-                gen.m_output << "    call printf\n";
-
-                if (is_stack_misaligned)
-                    gen.m_output << "    addq $40, %rsp\n";
-                else
-                    gen.m_output << "    addq $32, %rsp\n";
+                size_t offset = (&(*it) - &gen.m_vars[0] + 1) * 8;
+                gen.m_output << "    movl %eax, -" << offset << "(%rbp)\n";
 #elif defined(IPLATFORM_LINUX)
-                gen.m_output << "    ; out not implemented for linux yet\n";
+                size_t offset = (gen.m_stack_size - it->stack_loc - 1) * 8;
+                gen.m_output << "    mov QWORD [rsp + " << offset << "], rax\n";
 #endif
             }
 

@@ -23,7 +23,8 @@ enum class TokenType
     close_curly,
     if_,
     elif,
-    else_
+    else_,
+    comma
 };
 
 struct Token
@@ -101,7 +102,7 @@ struct NodeStmtLet
 
 struct NodeStmtOut
 {
-    NodeExpr *expr;
+    std::vector<NodeExpr *> exprs; // Multiple expressions instead of single
 };
 
 struct NodeStmt;
@@ -137,6 +138,12 @@ struct NodeStmtIf
     std::optional<NodeIfPred *> pred;
 };
 
+struct NodeStmtAssign
+{
+    Token ident;
+    NodeExpr *expr{};
+};
+
 struct NodeStmt
 {
     std::variant<
@@ -144,7 +151,8 @@ struct NodeStmt
         NodeStmtLet *,
         NodeStmtOut *,
         NodeStmtBlock *,
-        NodeStmtIf *>
+        NodeStmtIf *,
+        NodeStmtAssign *>
         var;
 };
 

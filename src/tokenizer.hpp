@@ -124,6 +124,9 @@ public:
             case '/':
                 tokens.push_back({.type = TokenType::div});
                 break;
+            case ',':
+                tokens.push_back({.type = TokenType::comma});
+                break;
             default:
                 LLOG(RED_TEXT("Unknown character in source\n"));
                 exit(EXIT_FAILURE);

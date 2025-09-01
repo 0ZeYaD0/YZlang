@@ -220,20 +220,52 @@ public:
             auto stmt = m_alloc.emplace<NodeStmt>(stmt_let);
             return stmt;
         }
+        else if (peek().has_value() && peek().value().type == TokenType::ident &&
+                 peek(1).has_value() && peek(1).value().type == TokenType::eq)
+        {
+            auto stmt_assign = m_alloc.alloc<NodeStmtAssign>();
+            stmt_assign->ident = consume();
+            consume();
+            if (auto expr = parse_expr())
+                stmt_assign->expr = expr.value();
+            else
+            {
+                LLOG(RED_TEXT("Invalid expression in assignment\n"));
+                exit(EXIT_FAILURE);
+            }
+            try_consume(TokenType::semi, "Expected `;`");
+            auto stmt = m_alloc.emplace<NodeStmt>(stmt_assign);
+            return stmt;
+        }
         else if (peek().has_value() && peek()->type == TokenType::out)
         {
             consume();
-            try_consume(TokenType::open_paren, "Expected '(' after print");
+            try_consume(TokenType::open_paren, "Expected '(' after out");
+
+            auto stmt_out = m_alloc.alloc<NodeStmtOut>();
+
+            // Parse first expression
             auto expr = parse_expr();
             if (!expr)
             {
-                LLOG(RED_TEXT("Invalid expression in print\n"));
+                LLOG(RED_TEXT("Expected expression in out\n"));
                 exit(EXIT_FAILURE);
             }
+            stmt_out->exprs.push_back(expr.value());
+
+            while (try_consume(TokenType::comma))
+            {
+                expr = parse_expr();
+                if (!expr)
+                {
+                    LLOG(RED_TEXT("Expected expression after comma\n"));
+                    exit(EXIT_FAILURE);
+                }
+                stmt_out->exprs.push_back(expr.value());
+            }
+
             try_consume(TokenType::close_paren, "Expected ')'");
             try_consume(TokenType::semi, "Expected ';'");
-            auto stmt_out = m_alloc.alloc<NodeStmtOut>();
-            stmt_out->expr = expr.value();
             auto stmt = m_alloc.emplace<NodeStmt>(stmt_out);
             return stmt;
         }

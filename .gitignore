@@ -2,6 +2,7 @@
 bin/
 obj/
 test.dio
+grammer.md
 *.exe
 *.o
 *.s
