@@ -196,13 +196,13 @@ YZLang follows a **clean, modular architecture** with distinct phases:
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Source    │───▶│ Tokenizer   │───▶│   Parser    │───▶│ Generator   │
+│   Source    │───▶│ Tokenizer   │───▶│   Parser   │───▶│ Generator  │
 │   (.yz)     │    │   (Lexer)   │    │   (AST)     │    │ (Assembly)  │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
                                                                    │
                                                                    ▼
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ Executable  │◀───│   Linker    │◀───│ Assembler   │◀───│ Assembly    │
+│ Executable  │◀───│   Linker   │◀───│ Assembler   │◀───│ Assembly   │
 │   (.exe)    │    │   (GCC)     │    │   (GCC)     │    │   (.s)      │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
 ```
