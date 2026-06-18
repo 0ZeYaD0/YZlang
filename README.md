@@ -1,6 +1,6 @@
-# YZLang Programming Language
+# ZLang Programming Language
 
-![YZLang Logo](https://img.shields.io/badge/YZLang-v1.0-blue.svg)
+![YZLang Logo](https://img.shields.io/badge/ZLang-v1.0-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![Language](https://img.shields.io/badge/language-C++-00599C.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -18,7 +18,7 @@ cd Zlang
 build.bat
 
 # Run your first program
-bin\yzlang.exe test\main.yz
+bin\zlang.exe test\main.z
 ```
 
 ## Table of Contents
@@ -37,7 +37,7 @@ bin\yzlang.exe test\main.yz
 YZLang is a **statically-typed, compiled programming language** that prioritizes simplicity and educational value. It compiles directly to **native x86-64 assembly** through a clean, multi-stage pipeline:
 
 ```
-Source Code (.yz) → Tokenizer → Parser → AST → Code Generator → Assembly → Native Executable
+Source Code (.z) → Tokenizer → Parser → AST → Code Generator → Assembly → Native Executable
 ```
 
 ### Why YZLang?
